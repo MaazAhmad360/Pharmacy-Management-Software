@@ -1,4 +1,5 @@
-#config.txt
+config.txt
+versonControl/
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
