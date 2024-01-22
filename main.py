@@ -5,7 +5,7 @@ import pymysql
 import random
 
 class ProductWidget(QFrame):
-    clicked = pyqtSignal(str, int, float)
+    clicked = pyqtSignal(str, float)
 
     def __init__(self, product_name, stock, price):
         super().__init__()
@@ -17,20 +17,22 @@ class ProductWidget(QFrame):
         self.product_name_label = QLabel(product_name)
         self.stock_label = QLabel(f"Stock: {stock}")
         self.price_label = QLabel(f"Price: Rs {price}")
+        self.add_to_cart_button = QPushButton("+ Add to Cart")
+        self.add_to_cart_button.clicked.connect(self.on_add_to_cart)
+
         layout.addWidget(self.product_name_label)
         layout.addWidget(self.stock_label)
         layout.addWidget(self.price_label)
+        layout.addWidget(self.add_to_cart_button)
+
 
         self.setLayout(layout)
         # Connect the click event to the custom slot
-        self.clicked.connect(self.on_click)
+        #self.clicked.connect(self.on_click)
 
-    def on_click(self, event):
-        # Emit the clicked signal when the widget is clicked
-        # Emit the custom signal with product details
+    def on_add_to_cart(self):
         self.clicked.emit(
             self.product_name_label.text(),
-            int(self.stock_label.text().split(":")[-1].strip()),
             float(self.price_label.text().split(":")[-1].strip().split()[1])
         )
 
@@ -85,12 +87,12 @@ class PharmacyPOSApp(QMainWindow):
         table_widget.setColumnCount(len(headers))
         table_widget.setHorizontalHeaderLabels(headers)
 
-    def add_product_to_cart(self, name, stock, price):
+    def add_product_to_cart(self, name, price):
         try:
             row_position = self.itemCartTable.rowCount()
             self.itemCartTable.insertRow(row_position)
             self.itemCartTable.setItem(row_position, 0, QTableWidgetItem(name))
-            self.itemCartTable.setItem(row_position, 1, QTableWidgetItem(str(stock)))
+            self.itemCartTable.setItem(row_position, 1, QTableWidgetItem(str(1)))
             self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(str(price)))
 
         except pymysql.Error as err:
