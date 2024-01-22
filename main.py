@@ -1,9 +1,12 @@
 from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QGridLayout, QLabel, QLineEdit, QFrame, QScrollArea
 from PyQt5 import uic
+from PyQt5.QtCore import Qt, pyqtSignal
 import pymysql
 import random
 
 class ProductWidget(QFrame):
+    clicked = pyqtSignal(str, int, float)
+
     def __init__(self, product_name, stock, price):
         super().__init__()
 
@@ -19,6 +22,17 @@ class ProductWidget(QFrame):
         layout.addWidget(self.price_label)
 
         self.setLayout(layout)
+        # Connect the click event to the custom slot
+        self.clicked.connect(self.on_click)
+
+    def on_click(self, event):
+        # Emit the clicked signal when the widget is clicked
+        # Emit the custom signal with product details
+        self.clicked.emit(
+            self.product_name_label.text(),
+            int(self.stock_label.text().split(":")[-1].strip()),
+            float(self.price_label.text().split(":")[-1].strip().split()[1])
+        )
 
 class PharmacyPOSApp(QMainWindow):
     def __init__(self):
@@ -61,6 +75,7 @@ class PharmacyPOSApp(QMainWindow):
         # Display default products
         self.display_default_products()
 
+
         # Connect the search button to the search_product function
         self.productSearchRightBtn.clicked.connect(self.search_product)
 
@@ -69,6 +84,18 @@ class PharmacyPOSApp(QMainWindow):
     def set_table_headers(self, table_widget, headers):
         table_widget.setColumnCount(len(headers))
         table_widget.setHorizontalHeaderLabels(headers)
+
+    def add_product_to_cart(self, name, stock, price):
+        try:
+            row_position = self.itemCartTable.rowCount()
+            self.itemCartTable.insertRow(row_position)
+            self.itemCartTable.setItem(row_position, 0, QTableWidgetItem(name))
+            self.itemCartTable.setItem(row_position, 1, QTableWidgetItem(str(stock)))
+            self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(str(price)))
+
+        except pymysql.Error as err:
+            QMessageBox.critical(self, "MySQL Error", f"Error: {err}")
+
 
     def display_table(self, query):
         try:
@@ -176,45 +203,9 @@ class PharmacyPOSApp(QMainWindow):
         try:
             # Display the search results in the product view
             row, col = 0, 0
-            max_displayed_products = 20  # Set the maximum number of displayed products
-            displayed_products = min(len(results), max_displayed_products)
-
-            for i in range(displayed_products):
-                product = results[i]
-                product_widget = ProductWidget(product["product_name"], product["quantity"], product["price"])
-                self.productGridLayout.addWidget(product_widget, row, col)
-
-                col += 1
-                if col == 2:  # Set the number of columns as needed
-                    col = 0
-                    row += 1
-
-            # If there are more products, add a scrollbar
-            if len(results) > max_displayed_products:
-                scroll_area = QScrollArea()
-                widget_container = QWidget()
-                widget_container.setLayout(self.productGridLayout)
-                scroll_area.setWidget(widget_container)
-                scroll_area.setWidgetResizable(True)
-
-                # Clear existing layout from rightPOSCol
-                for i in reversed(range(self.rightPOSCol.count())):
-                    widget = self.rightPOSCol.itemAt(i).widget()
-                    if widget:
-                        widget.setParent(None)
-
-                # Add the scroll area to rightPOSCol
-                self.rightPOSCol.addWidget(scroll_area)
-
-        except Exception as e:
-            print(f"Exception: {e}")
-
-    """def display_search_results(self, results):
-        try:
-            # Display the search results in the product view
-            row, col = 0, 0
             for product in results:
                 product_widget = ProductWidget(product["product_name"], product["quantity"], product["price"])
+                product_widget.clicked.connect(self.add_product_to_cart)
                 self.productGridLayout.addWidget(product_widget, row, col)
 
                 col += 1
@@ -222,7 +213,7 @@ class PharmacyPOSApp(QMainWindow):
                     col = 0
                     row += 1
         except Exception as e:
-            print(f"Exception: {e}")"""
+            print(f"Exception: {e}")
 
 if __name__ == '__main__':
     app = QApplication([])
