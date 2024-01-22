@@ -11,7 +11,8 @@ class ProductWidget(QFrame):
         super().__init__()
 
         self.setMaximumSize(300, 150)  # Set the maximum size as needed
-        self.setFrameStyle(QFrame.Panel | QFrame.Raised)  # Set frame style
+        self.setFrameStyle(QFrame.Box | QFrame.Raised)  # Set frame style
+        self.setStyleSheet("background-color: rgb(255, 255, 255);")
 
         layout = QVBoxLayout()
         self.product_name_label = QLabel(product_name)
@@ -142,7 +143,7 @@ class PharmacyPOSApp(QMainWindow):
             self.cart_items[product_name]['quantity'] = quantity
 
             # Update the cart table
-            self.update_cart_table()
+            # self.update_cart_table()
 
             # Update the total price labels
             self.update_total_price_labels()
@@ -200,14 +201,19 @@ class PharmacyPOSApp(QMainWindow):
             # print(results.count())
 
     def execute_query(self, query):
-        # Execute the SQL query and return the results
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute(query)
                 return cursor.fetchall()
-        except Exception as e:
-            print(f"Error executing query: {e}")
-            return []
+        except pymysql.Error as e:
+            # Attempt to reconnect if the error indicates a lost connection
+            if e.args[0] == 2006:
+                print("Reconnecting to the database...")
+                self.conn.ping(reconnect=True)
+                return self.execute_query(query)  # Retry the query
+            else:
+                print(f"Error executing query: {e}")
+                return []
 
     def clear_product_view(self):
         # Clear the product view layout
