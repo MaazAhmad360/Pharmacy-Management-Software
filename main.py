@@ -6,6 +6,7 @@ import random
 
 class ProductWidget(QFrame):
     clicked = pyqtSignal(str, int, float)
+    quantityChanged = pyqtSignal(str, int)  # New signal
 
     def __init__(self, product_name, stock, price):
         super().__init__()
@@ -37,6 +38,8 @@ class ProductWidget(QFrame):
             float(self.price_label.text().split(":")[-1].strip().split()[1])
         )
 
+    def update_quantity(self, quantity):
+        self.quantityChanged.emit(self.product_name_label.text(), quantity)
 class PharmacyPOSApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -65,10 +68,19 @@ class PharmacyPOSApp(QMainWindow):
         self.set_table_headers(self.itemCartTable, headers)
 
         self.cart_items = {} # Dictionary to store items in the cart with their quantities
+
+
+
         # Connect buttons to functions
         #self.btn_inventory.clicked.connect(self.open_inventory)
         #self.btn_reporting.clicked.connect(self.open_reporting)
         #self.btn_stock.clicked.connect(self.open_stock)
+
+        # Get references to the labels
+        self.total_items_count_label = self.findChild(QLabel, 'totalItemsCountLabel')
+        self.discount_input = self.findChild(QLineEdit, 'discountInput')
+        self.cash_return_count_label = self.findChild(QLabel, 'netPriceCountLabel')
+        self.price_count_label = self.findChild(QLabel, 'priceCountLabel')
 
         # Create a ProductView grid layout
         self.productGridLayout = QGridLayout()
@@ -83,6 +95,13 @@ class PharmacyPOSApp(QMainWindow):
         # Connect the search button to the search_product function
         self.productSearchRightBtn.clicked.connect(self.search_product)
 
+        # Connect the quantityChanged signal from ProductWidget to update_quantity_in_cart method
+        self.product_view_widget = self.productViewWidget
+        for i in range(self.product_view_widget.layout().count()):
+            product_widget = self.product_view_widget.layout().itemAt(i).widget()
+            if isinstance(product_widget, ProductWidget):
+                product_widget.quantityChanged.connect(self.update_quantity_in_cart)
+                product_widget.clicked.connect(self.add_to_cart)
         #self.display_table("SELECT * FROM pharmacy_table")
 
     def set_table_headers(self, table_widget, headers):
@@ -101,6 +120,9 @@ class PharmacyPOSApp(QMainWindow):
         # Update the cart table
         self.update_cart_table()
 
+        # Update the total price labels
+        self.update_total_price_labels()
+
     def update_cart_table(self):
         # Clear the cart table
         self.itemCartTable.setRowCount(0)
@@ -117,7 +139,6 @@ class PharmacyPOSApp(QMainWindow):
             quantity_spinbox = QSpinBox()
             quantity_spinbox.setMinimum(1)  # Set the minimum value for the spin box
             quantity_spinbox.setValue(details['quantity'])  # Set the initial value
-            quantity_spinbox.valueChanged.connect(self.update_quantity_in_cart)  # Connect the signal for value change
 
             # Set the spin box as the widget for the quantity column
             self.itemCartTable.setCellWidget(row_position, 1, quantity_spinbox)
@@ -125,12 +146,22 @@ class PharmacyPOSApp(QMainWindow):
             # Set the price
             self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(str(details['price'])))
 
+            # Connect the valueChanged signal for the new spin box
+            quantity_spinbox.valueChanged.connect(
+                lambda value, product=product: self.update_quantity_in_cart(product, value))
+
     def update_quantity_in_cart(self):
         # Update the quantity in the cart_items dictionary when the spin box value changes
         for row in range(self.itemCartTable.rowCount()):
             product_name = self.itemCartTable.item(row, 0).text()
             quantity = self.itemCartTable.cellWidget(row, 1).value()
             self.cart_items[product_name]['quantity'] = quantity
+
+            # Update the cart table
+            self.update_cart_table()
+
+            # Update the total price labels
+            self.update_total_price_labels()
 
     """def add_product_to_cart(self, name, price):
             try:
@@ -185,19 +216,14 @@ class PharmacyPOSApp(QMainWindow):
             # print(results.count())
 
     def execute_query(self, query):
+        # Execute the SQL query and return the results
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute(query)
                 return cursor.fetchall()
-        except pymysql.Error as e:
-            # Attempt to reconnect if the error indicates a lost connection
-            if e.args[0] == 2006:
-                print("Reconnecting to the database...")
-                self.conn.ping(reconnect=True)
-                return self.execute_query(query)  # Retry the query
-            else:
-                print(f"Error executing query: {e}")
-                return []
+        except Exception as e:
+            print(f"Error executing query: {e}")
+            return []
 
     def clear_product_view(self):
         # Clear the product view layout
@@ -269,6 +295,25 @@ class PharmacyPOSApp(QMainWindow):
                     row += 1
         except Exception as e:
             print(f"Exception: {e}")
+
+    def update_total_price_labels(self):
+        #total_items = sum(item['quantity'] for item in self.cart_items.values())
+        total_items = len(self.cart_items)
+        total_price = sum(item['quantity'] * item['price'] for item in self.cart_items.values())
+        discount = float(self.discount_input.text()) if self.discount_input.text() else 0.0
+        cash_return = total_price - discount  # Example calculation, update as needed
+
+        # Update the labels with the calculated values
+        self.total_items_count_label.setText(str(total_items))
+        self.cash_return_count_label.setText(f"Rs {cash_return:.2f}")
+        self.price_count_label.setText(f"Rs {total_price:.2f}")
+
+    def get_product_widget_by_name(self, product_name):
+        for i in range(self.product_view_widget.layout().count()):
+            product_widget = self.product_view_widget.layout().itemAt(i).widget()
+            if isinstance(product_widget, ProductWidget) and product_widget.product_name_label.text() == product_name:
+                return product_widget
+        return None
 
 if __name__ == '__main__':
     app = QApplication([])
