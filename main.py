@@ -6,7 +6,6 @@ import random
 
 class ProductWidget(QFrame):
     clicked = pyqtSignal(str, int, float)
-    quantityChanged = pyqtSignal(str, int)  # New signal
 
     def __init__(self, product_name, stock, price):
         super().__init__()
@@ -38,8 +37,6 @@ class ProductWidget(QFrame):
             float(self.price_label.text().split(":")[-1].strip().split()[1])
         )
 
-    def update_quantity(self, quantity):
-        self.quantityChanged.emit(self.product_name_label.text(), quantity)
 class PharmacyPOSApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -68,9 +65,6 @@ class PharmacyPOSApp(QMainWindow):
         self.set_table_headers(self.itemCartTable, headers)
 
         self.cart_items = {} # Dictionary to store items in the cart with their quantities
-
-
-
         # Connect buttons to functions
         #self.btn_inventory.clicked.connect(self.open_inventory)
         #self.btn_reporting.clicked.connect(self.open_reporting)
@@ -95,13 +89,6 @@ class PharmacyPOSApp(QMainWindow):
         # Connect the search button to the search_product function
         self.productSearchRightBtn.clicked.connect(self.search_product)
 
-        # Connect the quantityChanged signal from ProductWidget to update_quantity_in_cart method
-        self.product_view_widget = self.productViewWidget
-        for i in range(self.product_view_widget.layout().count()):
-            product_widget = self.product_view_widget.layout().itemAt(i).widget()
-            if isinstance(product_widget, ProductWidget):
-                product_widget.quantityChanged.connect(self.update_quantity_in_cart)
-                product_widget.clicked.connect(self.add_to_cart)
         #self.display_table("SELECT * FROM pharmacy_table")
 
     def set_table_headers(self, table_widget, headers):
@@ -139,16 +126,13 @@ class PharmacyPOSApp(QMainWindow):
             quantity_spinbox = QSpinBox()
             quantity_spinbox.setMinimum(1)  # Set the minimum value for the spin box
             quantity_spinbox.setValue(details['quantity'])  # Set the initial value
+            quantity_spinbox.valueChanged.connect(self.update_quantity_in_cart)  # Connect the signal for value change
 
             # Set the spin box as the widget for the quantity column
             self.itemCartTable.setCellWidget(row_position, 1, quantity_spinbox)
 
             # Set the price
             self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(str(details['price'])))
-
-            # Connect the valueChanged signal for the new spin box
-            quantity_spinbox.valueChanged.connect(
-                lambda value, product=product: self.update_quantity_in_cart(product, value))
 
     def update_quantity_in_cart(self):
         # Update the quantity in the cart_items dictionary when the spin box value changes
@@ -307,13 +291,6 @@ class PharmacyPOSApp(QMainWindow):
         self.total_items_count_label.setText(str(total_items))
         self.cash_return_count_label.setText(f"Rs {cash_return:.2f}")
         self.price_count_label.setText(f"Rs {total_price:.2f}")
-
-    def get_product_widget_by_name(self, product_name):
-        for i in range(self.product_view_widget.layout().count()):
-            product_widget = self.product_view_widget.layout().itemAt(i).widget()
-            if isinstance(product_widget, ProductWidget) and product_widget.product_name_label.text() == product_name:
-                return product_widget
-        return None
 
 if __name__ == '__main__':
     app = QApplication([])
