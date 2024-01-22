@@ -1,11 +1,11 @@
-from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QGridLayout, QLabel, QLineEdit, QFrame, QScrollArea
+from PyQt5.QtWidgets import QMainWindow, QApplication, QWidget, QVBoxLayout, QPushButton, QTableWidget, QTableWidgetItem, QGridLayout, QLabel, QLineEdit, QFrame, QScrollArea, QSpinBox
 from PyQt5 import uic
 from PyQt5.QtCore import Qt, pyqtSignal
 import pymysql
 import random
 
 class ProductWidget(QFrame):
-    clicked = pyqtSignal(str, float)
+    clicked = pyqtSignal(str, int, float)
 
     def __init__(self, product_name, stock, price):
         super().__init__()
@@ -33,6 +33,7 @@ class ProductWidget(QFrame):
     def on_add_to_cart(self):
         self.clicked.emit(
             self.product_name_label.text(),
+            int(self.stock_label.text().split(":")[-1].strip()),
             float(self.price_label.text().split(":")[-1].strip().split()[1])
         )
 
@@ -63,6 +64,7 @@ class PharmacyPOSApp(QMainWindow):
         headers = ['Product Name', 'Quantity', 'Price']
         self.set_table_headers(self.itemCartTable, headers)
 
+        self.cart_items = {} # Dictionary to store items in the cart with their quantities
         # Connect buttons to functions
         #self.btn_inventory.clicked.connect(self.open_inventory)
         #self.btn_reporting.clicked.connect(self.open_reporting)
@@ -87,17 +89,63 @@ class PharmacyPOSApp(QMainWindow):
         table_widget.setColumnCount(len(headers))
         table_widget.setHorizontalHeaderLabels(headers)
 
-    def add_product_to_cart(self, name, price):
-        try:
+    def add_to_cart(self, name, stock, price):
+        # Check if the item is already in the cart
+        if name in self.cart_items:
+            # If yes, increment the quantity
+            self.cart_items[name]['quantity'] += 1
+        else:
+            # If not, add it to the cart with quantity 1
+            self.cart_items[name] = {'quantity': 1, 'price': price}
+
+        # Update the cart table
+        self.update_cart_table()
+
+    def update_cart_table(self):
+        # Clear the cart table
+        self.itemCartTable.setRowCount(0)
+
+        # Populate the cart table with items, quantities, and price
+        for product, details in self.cart_items.items():
             row_position = self.itemCartTable.rowCount()
             self.itemCartTable.insertRow(row_position)
-            self.itemCartTable.setItem(row_position, 0, QTableWidgetItem(name))
-            self.itemCartTable.setItem(row_position, 1, QTableWidgetItem(str(1)))
-            self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(str(price)))
 
-        except pymysql.Error as err:
-            QMessageBox.critical(self, "MySQL Error", f"Error: {err}")
+            # Set the product name
+            self.itemCartTable.setItem(row_position, 0, QTableWidgetItem(product))
 
+            # Create a spin box for the quantity
+            quantity_spinbox = QSpinBox()
+            quantity_spinbox.setMinimum(1)  # Set the minimum value for the spin box
+            quantity_spinbox.setValue(details['quantity'])  # Set the initial value
+            quantity_spinbox.valueChanged.connect(self.update_quantity_in_cart)  # Connect the signal for value change
+
+            # Set the spin box as the widget for the quantity column
+            self.itemCartTable.setCellWidget(row_position, 1, quantity_spinbox)
+
+            # Set the price
+            self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(str(details['price'])))
+
+    def update_quantity_in_cart(self):
+        # Update the quantity in the cart_items dictionary when the spin box value changes
+        for row in range(self.itemCartTable.rowCount()):
+            product_name = self.itemCartTable.item(row, 0).text()
+            quantity = self.itemCartTable.cellWidget(row, 1).value()
+            self.cart_items[product_name]['quantity'] = quantity
+
+    """def add_product_to_cart(self, name, price):
+            try:
+                if name in self.cart_items:
+                    # If yes, increment the quantity
+                    self.cart_items[name]['quantity'] += 1
+                else:
+                    row_position = self.itemCartTable.rowCount()
+                    self.itemCartTable.insertRow(row_position)
+                    self.itemCartTable.setItem(row_position, 0, QTableWidgetItem(name))
+                    self.itemCartTable.setItem(row_position, 1, QTableWidgetItem(str(1)))
+                    self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(str(price)))
+
+            except pymysql.Error as err:
+                QMessageBox.critical(self, "MySQL Error", f"Error: {err}")"""
 
     def display_table(self, query):
         try:
@@ -137,14 +185,19 @@ class PharmacyPOSApp(QMainWindow):
             # print(results.count())
 
     def execute_query(self, query):
-        # Execute the SQL query and return the results
         try:
             with self.conn.cursor() as cursor:
                 cursor.execute(query)
                 return cursor.fetchall()
-        except Exception as e:
-            print(f"Error executing query: {e}")
-            return []
+        except pymysql.Error as e:
+            # Attempt to reconnect if the error indicates a lost connection
+            if e.args[0] == 2006:
+                print("Reconnecting to the database...")
+                self.conn.ping(reconnect=True)
+                return self.execute_query(query)  # Retry the query
+            else:
+                print(f"Error executing query: {e}")
+                return []
 
     def clear_product_view(self):
         # Clear the product view layout
@@ -207,7 +260,7 @@ class PharmacyPOSApp(QMainWindow):
             row, col = 0, 0
             for product in results:
                 product_widget = ProductWidget(product["product_name"], product["quantity"], product["price"])
-                product_widget.clicked.connect(self.add_product_to_cart)
+                product_widget.clicked.connect(self.add_to_cart)
                 self.productGridLayout.addWidget(product_widget, row, col)
 
                 col += 1
