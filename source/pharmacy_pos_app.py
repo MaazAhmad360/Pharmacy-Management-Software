@@ -65,10 +65,13 @@ class PharmacyPOSApp(QMainWindow):
         # Connect the text changed signal to start the timer
         self.productSearchRightInput.textChanged.connect(self.start_product_search_timer)
 
-        # Turn the customer selve
+        self.isCustomerSelected = False
+        # Modify the settings of ComboBox and Connect the respective signals
         self.customerComboBox.setEditable(True)
+        self.customerComboBox.setCompleter(None)
         self.customerComboBox.currentTextChanged.connect(self.start_customer_search_timer)
         self.customerComboBox.editTextChanged.connect(self.start_customer_search_timer)
+        self.customerComboBox.activated.connect(self.set_customer_selected)
         # self.customerComboBox.currentTextChanged.connect(self.search_customers_dynamic)
         # self.customerComboBox.editTextChanged.connect(self.search_customers_dynamic)
 
@@ -290,7 +293,12 @@ class PharmacyPOSApp(QMainWindow):
 
     def delayed_search_customer(self):
         # Called when the timer times out (user has stopped typing)
-        self.search_customers_dynamic()
+        if self.isCustomerSelected == False:
+            self.search_customers_dynamic()
+
+    def set_customer_selected(self):
+        self.isCustomerSelected = True
+
     def fetch_customer_names(self, search_term=None):
         # Define the base query to fetch customer names
         base_query = "SELECT DISTINCT Name FROM Customers"
