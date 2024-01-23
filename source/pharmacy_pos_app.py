@@ -2,7 +2,7 @@
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, QPushButton, QTableWidgetItem, QComboBox, QCompleter
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import pyqtSignal, QTimer, Qt
+from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent
 import pymysql
 from source.product_widget import ProductWidget
 from source.database_helper import connect_to_database, execute_query
@@ -64,6 +64,8 @@ class PharmacyPOSApp(QMainWindow):
 
         # Turn the customer selve
         self.customerComboBox.setEditable(True)
+        self.customerComboBox.setPlaceholderText("Select Customer")
+        self.customerComboBox.installEventFilter(self)
         # self.customerComboBox.currentTextChanged.connect(self.start_customer_search_timer)
         # self.customerComboBox.editTextChanged.connect(self.start_customer_search_timer)
         # self.customerComboBox.currentTextChanged.connect(self.search_customers_dynamic)
@@ -78,9 +80,9 @@ class PharmacyPOSApp(QMainWindow):
         # Set the initial completion model
         self.customerSearchCompleter = QCompleter()
         self.customerSearchCompleter.setCaseSensitivity(Qt.CaseInsensitive)
+        self.customerSearchCompleter.setFilterMode(Qt.MatchContains)
         self.customerSearchCompleter.setModel(self.customerComboBox.model())
         self.customerComboBox.setCompleter(self.customerSearchCompleter)
-
 
         #self.display_table("SELECT * FROM pharmacy_table")
 
@@ -150,7 +152,7 @@ class PharmacyPOSApp(QMainWindow):
             quantity = self.itemCartTable.cellWidget(row, 1).value()
             price = self.itemCartTable.item(row, 2).text()
 
-            totalPrice = quantity * float(price);
+            totalPrice = quantity * float(price)
             self.itemCartTable.setItem(row, 3, QTableWidgetItem(str(f"Rs {totalPrice}")))
             self.cart_items[product_name]['quantity'] = quantity
             self.cart_items[product_name]['netPrice'] = totalPrice
@@ -160,8 +162,9 @@ class PharmacyPOSApp(QMainWindow):
 
             # Update the total price labels
             self.update_total_price_labels()
+
     def update_total_price_labels(self):
-        #total_items = sum(item['quantity'] for item in self.cart_items.values())
+        # total_items = sum(item['quantity'] for item in self.cart_items.values())
         total_items = len(self.cart_items)
         total_price = sum(item['quantity'] * item['price'] for item in self.cart_items.values())
         discount = float(self.discount_input.text()) if self.discount_input.text() else 0.0
@@ -325,6 +328,36 @@ class PharmacyPOSApp(QMainWindow):
         # Perform the search in the database and populate customer names
         self.populate_customer_names(search_term)
 
+    def eventFilter(self, source, event):
+        if event.type() == QEvent.FocusIn and source is self.customerComboBox:
+            if self.customerComboBox.hasFocus() and self.customerComboBox.currentText() == "":
+                self.customerSearchCompleter.setCompletionPrefix("")
+                self.customerSearchCompleter.complete()
+                # self.customerComboBox.completer().complete()
+                # self.customerComboBox.showPopup()
+
+        elif event.type() == QEvent.KeyPress:
+            # Intercept key events, specifically looking for the Enter key press
+            key_event = event
+            if key_event.key() == Qt.Key_Enter or key_event.key() == Qt.Key_Return:
+                current_text = self.customerComboBox.currentText()
+                completer_model = self.customerSearchCompleter.model()
+
+                # Check if the current text is not in the model list
+                if current_text and current_text not in self.get_string_list(completer_model):
+                    # Prevent the completer from adding the current text
+                    self.customerSearchCompleter.setCompletionPrefix("")
+                    return True  # Event handled, don't propagate further
+
+        return super().eventFilter(source, event)
+
+    def get_string_list(self, model):
+        string_list = []
+        for row in range(model.rowCount()):
+            item = model.item(row)
+            if item is not None:
+                string_list.append(item.text())
+        return string_list
     """def start_customer_search_timer(self):
         # Start the timer when text is changed
         self.customer_search_timer.start(300)  # Adjust the delay (milliseconds) as needed
