@@ -1,11 +1,12 @@
 # pharmacy_pos_app.py
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, QPushButton, QTableWidgetItem, QComboBox
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, QPushButton, QTableWidgetItem, QComboBox, QCompleter
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import pyqtSignal, QTimer, QEvent
+from PyQt5.QtCore import pyqtSignal, QTimer, Qt
 import pymysql
 from source.product_widget import ProductWidget
 from source.database_helper import connect_to_database, execute_query
+
 
 class PharmacyPOSApp(QMainWindow):
     def __init__(self):
@@ -29,7 +30,7 @@ class PharmacyPOSApp(QMainWindow):
 
         self.cart_items = {} # Dictionary to store items in the cart with their quantities
 
-        #Get reference to widgets
+        # Get reference to widgets
         self.customerComboBox = self.findChild(QComboBox, 'customerSelect')
         self.addCustomerButton = self.findChild(QPushButton, 'addCustomerBtn')
 
@@ -52,10 +53,6 @@ class PharmacyPOSApp(QMainWindow):
         self.product_search_timer = QTimer()
         self.product_search_timer.timeout.connect(self.delayed_search_product)
 
-        # Create a QTimer for dynamic customer search
-        self.customer_search_timer = QTimer()
-        self.customer_search_timer.timeout.connect(self.delayed_search_customer)
-
         # Connect the search button to the search_product function
         self.productSearchRightBtn.clicked.connect(self.search_product)
 
@@ -65,15 +62,10 @@ class PharmacyPOSApp(QMainWindow):
         # Connect the text changed signal to start the timer
         self.productSearchRightInput.textChanged.connect(self.start_product_search_timer)
 
-        self.isCustomerSelected = False
-        # Modify the settings of ComboBox and Connect the respective signals
+        # Turn the customer selve
         self.customerComboBox.setEditable(True)
-        self.customerComboBox.setCompleter(None)
-        self.customerComboBox.setInsertPolicy(QComboBox.NoInsert)  # Disable automatic insertion of user input
-        self.customerComboBox.currentTextChanged.connect(self.start_customer_search_timer)
-        self.customerComboBox.editTextChanged.connect(self.start_customer_search_timer)
-        self.customerComboBox.activated.connect(self.set_customer_selected)
-        self.customerComboBox.installEventFilter(self)
+        # self.customerComboBox.currentTextChanged.connect(self.start_customer_search_timer)
+        # self.customerComboBox.editTextChanged.connect(self.start_customer_search_timer)
         # self.customerComboBox.currentTextChanged.connect(self.search_customers_dynamic)
         # self.customerComboBox.editTextChanged.connect(self.search_customers_dynamic)
 
@@ -82,6 +74,13 @@ class PharmacyPOSApp(QMainWindow):
 
         # Populate the customer names in the combo box
         self.populate_customer_names()
+
+        # Set the initial completion model
+        self.customerSearchCompleter = QCompleter()
+        self.customerSearchCompleter.setCaseSensitivity(Qt.CaseInsensitive)
+        self.customerSearchCompleter.setModel(self.customerComboBox.model())
+        self.customerComboBox.setCompleter(self.customerSearchCompleter)
+
 
         #self.display_table("SELECT * FROM pharmacy_table")
 
@@ -273,6 +272,7 @@ class PharmacyPOSApp(QMainWindow):
         else:
             # If search term is empty, display default products
             self.display_default_products()
+
     def display_search_results(self, results):
         try:
             # Display the search results in the product view
@@ -288,30 +288,6 @@ class PharmacyPOSApp(QMainWindow):
                     row += 1
         except Exception as e:
             print(f"Exception: {e}")
-
-    def eventFilter(self, source, event):
-        if (event.type() == QEvent.FocusIn and source is self.customerComboBox and
-                self.isCustomerSelected and source.currentText()):
-            self.start_customer_search_timer()
-
-            self.customerComboBox.lineEdit().setFocus   ()
-
-        return super().eventFilter(source, event)
-
-    def start_customer_search_timer(self):
-        # Start the timer when text is changed
-        self.customer_search_timer.start(300)  # Adjust the delay (milliseconds) as needed
-
-    def delayed_search_customer(self):
-        # Called when the timer times out (user has stopped typing)
-        if not self.isCustomerSelected:
-            self.search_customers_dynamic()
-
-    def set_customer_selected(self, index):
-        if index != -1:
-            self.isCustomerSelected = True
-        else:
-            self.isCustomerSelected = False
 
     def fetch_customer_names(self, search_term=None):
         # Define the base query to fetch customer names
@@ -342,7 +318,22 @@ class PharmacyPOSApp(QMainWindow):
         self.customerComboBox.clear()
         self.customerComboBox.addItems(customer_names)
 
-    def search_customers_dynamic(self):
+    def search_customers(self):
+        # Get the search term from the input field
+        search_term = self.customerSearchInput.text()
+
+        # Perform the search in the database and populate customer names
+        self.populate_customer_names(search_term)
+
+    """def start_customer_search_timer(self):
+        # Start the timer when text is changed
+        self.customer_search_timer.start(300)  # Adjust the delay (milliseconds) as needed
+
+    def delayed_search_customer(self):
+        # Called when the timer times out (user has stopped typing)
+        self.search_customers_dynamic()"""
+
+    """def search_customers_dynamic(self):
         # Get the search term from the input field
         search_term = self.customerComboBox.currentText()
 
@@ -352,22 +343,11 @@ class PharmacyPOSApp(QMainWindow):
             self.customerComboBox.showPopup()
             #results = self.execute_query(search_query)
 
-        # Reset the focus and clear the search term
-        self.customerComboBox.clearFocus()
-        self.customerComboBox.setCurrentText("")
-
             # Display the search results in the product view
             #self.display_search_results(results)
-        # else:
-        #     # If search term is empty, display default products
-        #     self.populate_customer_names()
-
-    def search_customers(self):
-        # Get the search term from the input field
-        search_term = self.customerSearchInput.text()
-
-        # Perform the search in the database and populate customer names
-        self.populate_customer_names(search_term)
+        else:
+            # If search term is empty, display default products
+            self.populate_customer_names()"""
 
     """def add_product_to_cart(self, name, price):
             try:
