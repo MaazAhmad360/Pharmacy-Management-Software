@@ -1,8 +1,8 @@
 # pharmacy_pos_app.py
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, QPushButton, QTableWidgetItem
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, QPushButton, QTableWidgetItem, QComboBox
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, QTimer
 import pymysql
 from source.product_widget import ProductWidget
 from source.database_helper import connect_to_database, execute_query
@@ -29,6 +29,10 @@ class PharmacyPOSApp(QMainWindow):
 
         self.cart_items = {} # Dictionary to store items in the cart with their quantities
 
+        #Get reference to widgets
+        self.customerComboBox = self.findChild(QComboBox, 'customerSelect')
+        self.addCustomerButton = self.findChild(QPushButton, 'addCustomerBtn')
+
         # Get references to the labels
         self.total_items_count_label = self.findChild(QLabel, 'totalItemsCountLabel')
         self.discount_input = self.findChild(QLineEdit, 'discountInput')
@@ -44,11 +48,35 @@ class PharmacyPOSApp(QMainWindow):
         # Display default products
         self.display_default_products()
 
+        # Create a QTimer for dynamic product search
+        self.product_search_timer = QTimer()
+        self.product_search_timer.timeout.connect(self.delayed_search_product)
+
+        # Create a QTimer for dynamic customer search
+        self.customer_search_timer = QTimer()
+        self.customer_search_timer.timeout.connect(self.delayed_search_customer)
+
         # Connect the search button to the search_product function
         self.productSearchRightBtn.clicked.connect(self.search_product)
 
         # Connect the text changed signal to the search_product_dynamic function
-        self.productSearchRightInput.textChanged.connect(self.search_product_dynamic)
+        # self.productSearchRightInput.textChanged.connect(self.search_product_dynamic)
+
+        # Connect the text changed signal to start the timer
+        self.productSearchRightInput.textChanged.connect(self.start_product_search_timer)
+
+        # Turn the customer selve
+        self.customerComboBox.setEditable(True)
+        self.customerComboBox.currentTextChanged.connect(self.start_customer_search_timer)
+        self.customerComboBox.editTextChanged.connect(self.start_customer_search_timer)
+        # self.customerComboBox.currentTextChanged.connect(self.search_customers_dynamic)
+        # self.customerComboBox.editTextChanged.connect(self.search_customers_dynamic)
+
+        # Connect the QPushButton click event to the add_customer function
+        # self.addCustomerButton.clicked.connect(self.add_customer)
+
+        # Populate the customer names in the combo box
+        self.populate_customer_names()
 
         #self.display_table("SELECT * FROM pharmacy_table")
 
@@ -196,6 +224,14 @@ class PharmacyPOSApp(QMainWindow):
         # Display the default products in the product view
         self.display_search_results(default_results)
 
+    def start_product_search_timer(self):
+        # Start the timer when text is changed
+        self.product_search_timer.start(300)  # Adjust the delay (milliseconds) as needed
+
+    def delayed_search_product(self):
+        # Called when the timer times out (user has stopped typing)
+        self.search_product_dynamic()
+
     def search_product(self):
         # Clear previous search results
         self.clear_product_view()
@@ -247,6 +283,65 @@ class PharmacyPOSApp(QMainWindow):
                     row += 1
         except Exception as e:
             print(f"Exception: {e}")
+
+    def start_customer_search_timer(self):
+        # Start the timer when text is changed
+        self.customer_search_timer.start(300)  # Adjust the delay (milliseconds) as needed
+
+    def delayed_search_customer(self):
+        # Called when the timer times out (user has stopped typing)
+        self.search_customers_dynamic()
+    def fetch_customer_names(self, search_term=None):
+        # Define the base query to fetch customer names
+        base_query = "SELECT DISTINCT Name FROM Customers"
+
+        # If a search term is provided, add it to the query
+        if search_term:
+            base_query += f" WHERE Name LIKE '%{search_term}%'"
+
+        try:
+            with self.conn.cursor() as cursor:
+                cursor.execute(base_query)
+                result = cursor.fetchall()
+
+                # Extract customer names from the result
+                customer_names = [customer['Name'] for customer in result]
+
+                return customer_names
+        except pymysql.Error as e:
+            print(f"Error fetching customer names: {e}")
+            return []
+
+    def populate_customer_names(self, search_term=None):
+        # Fetch the list of customer names from the database based on the search term
+        customer_names = self.fetch_customer_names(search_term)
+
+        # Clear existing items and populate the names in the combo box
+        self.customerComboBox.clear()
+        self.customerComboBox.addItems(customer_names)
+
+    def search_customers_dynamic(self):
+        # Get the search term from the input field
+        search_term = self.customerComboBox.currentText()
+
+        # Perform the search in the database
+        if search_term:
+            self.populate_customer_names(search_term)
+            self.customerComboBox.showPopup()
+            #results = self.execute_query(search_query)
+
+            # Display the search results in the product view
+            #self.display_search_results(results)
+        else:
+            # If search term is empty, display default products
+            self.populate_customer_names()
+
+    def search_customers(self):
+        # Get the search term from the input field
+        search_term = self.customerSearchInput.text()
+
+        # Perform the search in the database and populate customer names
+        self.populate_customer_names(search_term)
 
     """def add_product_to_cart(self, name, price):
             try:
