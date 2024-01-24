@@ -1,5 +1,6 @@
 # pharmacy_pos_app.py
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, \
+    QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent
@@ -29,7 +30,7 @@ class PharmacyPOSApp(QMainWindow):
         headers = ['Product Name', 'Quantity', 'Unit Rate', 'Net Price', 'Remove']
         self.set_table_headers(self.itemCartTable, headers)
 
-        self.cart_items = {} # Dictionary to store items in the cart with their quantities
+        self.cart_items = {}  # Dictionary to store items in the cart with their quantities
 
         # Get reference to widgets
         self.customerComboBox = self.findChild(QComboBox, 'customerSelect')
@@ -69,6 +70,7 @@ class PharmacyPOSApp(QMainWindow):
         self.customerComboBox.setPlaceholderText("Select Customer")  # when the combo box is uneditable
         self.customerComboBox.lineEdit().setPlaceholderText("Select Customer")  # when the combo bos is editable
         self.customerComboBox.installEventFilter(self)
+        self.customerListModel = self.customerComboBox.model()
         self.customerComboBox.clearFocus()
         # self.customerComboBox.currentTextChanged.connect(self.start_customer_search_timer)
         # self.customerComboBox.editTextChanged.connect(self.start_customer_search_timer)
@@ -88,7 +90,7 @@ class PharmacyPOSApp(QMainWindow):
         self.customerSearchCompleter.setModel(self.customerComboBox.model())
         self.customerComboBox.setCompleter(self.customerSearchCompleter)
 
-        #self.display_table("SELECT * FROM pharmacy_table")
+        # self.display_table("SELECT * FROM pharmacy_table")
 
     def eventFilter(self, source, event):
         if event.type() == QEvent.FocusIn and source is self.customerComboBox:
@@ -101,15 +103,21 @@ class PharmacyPOSApp(QMainWindow):
         elif event.type() == QEvent.KeyPress:
             # Intercept key events, specifically looking for the Enter key press
             key_event = event
-            if key_event.key() == Qt.Key_Enter or key_event.key() == Qt.Key_Return:
-                current_text = self.customerComboBox.currentText()
-                completer_model = self.customerSearchCompleter.model()
+            if source == self.customerComboBox:
+                if key_event.key() == Qt.Key_Enter or key_event.key() == Qt.Key_Return:
+                    current_text = self.customerComboBox.currentText()
+                    completer_model = self.customerSearchCompleter.model()
 
-                # Check if the current text is not in the model list
-                if current_text and current_text not in self.get_string_list(completer_model):
-                    # Prevent the completer from adding the current text
-                    self.customerSearchCompleter.setCompletionPrefix("")
-                    return True  # Event handled, don't propagate further
+                    # Check if the current text is not in the model list
+                    # Check if the current text exactly matches one of the existing items
+                    if current_text in [self.customerListModel.item(i).text() for i in range(self.customerListModel.rowCount())]:
+                        self.comboBox.completer().setCompletionPrefix(current_text)
+                    # if current_text and current_text not in self.get_string_list(completer_model):
+                    elif current_text and current_text not in self.get_string_list(completer_model):
+                        # Prevent the completer from adding the current text
+                        self.customerSearchCompleter.setCompletionPrefix("")
+                        self.add_customer(str(current_text))
+                        return True  # Event handled, don't propagate further
 
         return super().eventFilter(source, event)
 
@@ -170,7 +178,6 @@ class PharmacyPOSApp(QMainWindow):
 
             totalPrice = details['quantity'] * details['price']
             self.itemCartTable.setItem(row_position, 3, QTableWidgetItem(str(f"Rs {totalPrice}")))
-
 
     def update_quantity_in_cart(self):
         # Update the quantity in the cart_items dictionary when the spin box value changes
@@ -363,11 +370,13 @@ class PharmacyPOSApp(QMainWindow):
                 string_list.append(item.text())
         return string_list
 
-    def add_customer(self):
+    def add_customer(self, name):
         try:
             # Create an instance of the AddCustomerDialog
             dialog = AddCustomerDialog(self)
 
+            if name:
+                dialog.name_input.insert(name)
             # Execute the dialog and get the result
             result = dialog.exec_()
 
