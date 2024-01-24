@@ -58,6 +58,7 @@ class PharmacyPOSApp(QMainWindow):
 
         # Connect the text changed signal to the search_product_dynamic function
         self.productSearchRightInput.textChanged.connect(self.search_product_dynamic)
+        self.productSearchRightInput.setPlaceholderText("Search Products")
 
         # Connect the text changed signal to start the timer
         # self.productSearchRightInput.textChanged.connect(self.start_product_search_timer)
