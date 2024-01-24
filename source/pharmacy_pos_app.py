@@ -50,22 +50,24 @@ class PharmacyPOSApp(QMainWindow):
         self.display_default_products()
 
         # Create a QTimer for dynamic product search
-        self.product_search_timer = QTimer()
-        self.product_search_timer.timeout.connect(self.delayed_search_product)
+        # self.product_search_timer = QTimer()
+        # self.product_search_timer.timeout.connect(self.delayed_search_product)
 
         # Connect the search button to the search_product function
         self.productSearchRightBtn.clicked.connect(self.search_product)
 
         # Connect the text changed signal to the search_product_dynamic function
-        # self.productSearchRightInput.textChanged.connect(self.search_product_dynamic)
+        self.productSearchRightInput.textChanged.connect(self.search_product_dynamic)
 
         # Connect the text changed signal to start the timer
-        self.productSearchRightInput.textChanged.connect(self.start_product_search_timer)
+        # self.productSearchRightInput.textChanged.connect(self.start_product_search_timer)
 
-        # Turn the customer selve
+        # Set up customerComboBox settings
         self.customerComboBox.setEditable(True)
-        self.customerComboBox.setPlaceholderText("Select Customer")
+        self.customerComboBox.setPlaceholderText("Select Customer")  # when the combo box is uneditable
+        self.customerComboBox.lineEdit().setPlaceholderText("Select Customer")  # when the combo bos is editable
         self.customerComboBox.installEventFilter(self)
+        self.customerComboBox.clearFocus()
         # self.customerComboBox.currentTextChanged.connect(self.start_customer_search_timer)
         # self.customerComboBox.editTextChanged.connect(self.start_customer_search_timer)
         # self.customerComboBox.currentTextChanged.connect(self.search_customers_dynamic)
