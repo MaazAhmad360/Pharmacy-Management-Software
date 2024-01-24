@@ -1,6 +1,6 @@
 # pharmacy_pos_app.py
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, \
-    QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog
+    QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent
@@ -398,11 +398,14 @@ class PharmacyPOSApp(QMainWindow):
         query = f"INSERT INTO Customers (Name, Address, Contact) VALUES ('{name}', '{address}', '{contact}')"
         success, result = execute_query_with_status(query, self.conn)
 
+        successDialog = QMessageBox()
         if success:
-            print("Customer added successfully!")
+            successDialog.setText("Customer Added Successfuly")
+            # print("Customer added successfully!")
         else:
-            print("Failed to add customer. Please check the logs for details.")
+            successDialog.setText("Failed To Add Customer")
 
+        successDialog.exec_()
         return result
 
     """def add_customer_to_database(self, name, address, contact):
