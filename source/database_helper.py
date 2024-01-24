@@ -2,6 +2,7 @@
 import pymysql
 import configparser
 
+
 def read_db_config(filename='source/config.ini', section='Database'):
     # create a parser
     parser = configparser.ConfigParser()
@@ -18,6 +19,8 @@ def read_db_config(filename='source/config.ini', section='Database'):
         raise Exception(f'{section} not found in the {filename} file')
 
     return db_config
+
+
 def connect_to_database():
     # Read database configuration
     db_config = read_db_config()
@@ -32,6 +35,7 @@ def connect_to_database():
         cursorclass=pymysql.cursors.DictCursor
     )
 
+
 def execute_query(query, conn):
     try:
         with conn.cursor() as cursor:
@@ -45,7 +49,26 @@ def execute_query(query, conn):
             return execute_query(query, conn)  # Retry the query
         else:
             print(f"Error executing query: {e}")
+            raise
             return []
+
+
+def execute_query_with_status(query, conn):
+    try:
+        with conn.cursor() as cursor:
+            cursor.execute(query)
+            conn.commit()  # Commit the changes
+            return True, cursor.fetchall()
+    except pymysql.Error as e:
+        # Attempt to reconnect if the error indicates a lost connection
+        if e.args[0] == 2006:
+            print("Reconnecting to the database...")
+            conn.ping(reconnect=True)
+            return execute_query_with_status(query, conn)  # Retry the query
+        else:
+            print(f"Error executing query: {e}")
+            return False, []
+
 
 def close_database_connection(conn):
     # Close the database connection

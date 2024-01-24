@@ -1,11 +1,12 @@
 # pharmacy_pos_app.py
-from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, QPushButton, QTableWidgetItem, QComboBox, QCompleter
+from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent
 import pymysql
 from source.product_widget import ProductWidget
-from source.database_helper import connect_to_database, execute_query
+from source.database_helper import connect_to_database, execute_query, execute_query_with_status
+from source.add_customer_dialog import AddCustomerDialog
 
 
 class PharmacyPOSApp(QMainWindow):
@@ -19,7 +20,7 @@ class PharmacyPOSApp(QMainWindow):
         self.conn = connect_to_database()
 
         # Create a random table with placeholder data
-        #self.create_random_table()
+        # self.create_random_table()
 
         self.showMaximized()  # This will make the window full screen
         self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
@@ -75,7 +76,7 @@ class PharmacyPOSApp(QMainWindow):
         # self.customerComboBox.editTextChanged.connect(self.search_customers_dynamic)
 
         # Connect the QPushButton click event to the add_customer function
-        # self.addCustomerButton.clicked.connect(self.add_customer)
+        self.addCustomerButton.clicked.connect(self.add_customer)
 
         # Populate the customer names in the combo box
         self.populate_customer_names()
@@ -88,6 +89,29 @@ class PharmacyPOSApp(QMainWindow):
         self.customerComboBox.setCompleter(self.customerSearchCompleter)
 
         #self.display_table("SELECT * FROM pharmacy_table")
+
+    def eventFilter(self, source, event):
+        if event.type() == QEvent.FocusIn and source is self.customerComboBox:
+            if self.customerComboBox.hasFocus() and self.customerComboBox.currentText() == "":
+                self.customerSearchCompleter.setCompletionPrefix("")
+                self.customerSearchCompleter.complete()
+                # self.customerComboBox.completer().complete()
+                # self.customerComboBox.showPopup()
+
+        elif event.type() == QEvent.KeyPress:
+            # Intercept key events, specifically looking for the Enter key press
+            key_event = event
+            if key_event.key() == Qt.Key_Enter or key_event.key() == Qt.Key_Return:
+                current_text = self.customerComboBox.currentText()
+                completer_model = self.customerSearchCompleter.model()
+
+                # Check if the current text is not in the model list
+                if current_text and current_text not in self.get_string_list(completer_model):
+                    # Prevent the completer from adding the current text
+                    self.customerSearchCompleter.setCompletionPrefix("")
+                    return True  # Event handled, don't propagate further
+
+        return super().eventFilter(source, event)
 
     def set_table_headers(self, table_widget, headers):
         table_widget.setColumnCount(len(headers))
@@ -331,29 +355,6 @@ class PharmacyPOSApp(QMainWindow):
         # Perform the search in the database and populate customer names
         self.populate_customer_names(search_term)
 
-    def eventFilter(self, source, event):
-        if event.type() == QEvent.FocusIn and source is self.customerComboBox:
-            if self.customerComboBox.hasFocus() and self.customerComboBox.currentText() == "":
-                self.customerSearchCompleter.setCompletionPrefix("")
-                self.customerSearchCompleter.complete()
-                # self.customerComboBox.completer().complete()
-                # self.customerComboBox.showPopup()
-
-        elif event.type() == QEvent.KeyPress:
-            # Intercept key events, specifically looking for the Enter key press
-            key_event = event
-            if key_event.key() == Qt.Key_Enter or key_event.key() == Qt.Key_Return:
-                current_text = self.customerComboBox.currentText()
-                completer_model = self.customerSearchCompleter.model()
-
-                # Check if the current text is not in the model list
-                if current_text and current_text not in self.get_string_list(completer_model):
-                    # Prevent the completer from adding the current text
-                    self.customerSearchCompleter.setCompletionPrefix("")
-                    return True  # Event handled, don't propagate further
-
-        return super().eventFilter(source, event)
-
     def get_string_list(self, model):
         string_list = []
         for row in range(model.rowCount()):
@@ -361,6 +362,47 @@ class PharmacyPOSApp(QMainWindow):
             if item is not None:
                 string_list.append(item.text())
         return string_list
+
+    def add_customer(self):
+        try:
+            # Create an instance of the AddCustomerDialog
+            dialog = AddCustomerDialog(self)
+
+            # Execute the dialog and get the result
+            result = dialog.exec_()
+
+            # Check if the user clicked the "Add" button
+            if result == QDialog.Accepted:
+                name, address, contact = dialog.get_customer_info()
+
+                # Add the customer to the database (you need to implement this function)
+                self.add_customer_to_database(name, address, contact)
+
+                # Update the customer combo box with the new customer
+                self.populate_customer_names()
+
+        except Exception as e:
+            print(f"Error adding customer: {e}")
+            # Handle the error appropriately (e.g., show an error message to the user)
+
+    def add_customer_to_database(self, name, address, contact):
+        query = f"INSERT INTO Customers (Name, Address, Contact) VALUES ('{name}', '{address}', '{contact}')"
+        success, result = execute_query_with_status(query, self.conn)
+
+        if success:
+            print("Customer added successfully!")
+        else:
+            print("Failed to add customer. Please check the logs for details.")
+
+        return result
+
+    """def add_customer_to_database(self, name, address, contact):
+        # Implement the code to add the customer to the database
+        # query = f"INSERT INTO 'Customers' ('Name', 'Address', 'Contact') VALUES ('{name}', '{address}', '{contact}')"
+        query = f"INSERT INTO Customers (Name, Address, Contact) VALUES ('{name}', '{address}', '{contact}')"
+        # query = f"INSERT INTO `Customers`(`Name`, `Address`, `Contact`) VALUES ('{name}','{address}','{contact}')"
+        self.execute_query(query)"""
+
     """def start_customer_search_timer(self):
         # Start the timer when text is changed
         self.customer_search_timer.start(300)  # Adjust the delay (milliseconds) as needed
