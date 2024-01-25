@@ -1,6 +1,6 @@
 # pharmacy_pos_app.py
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, \
-    QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox
+    QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox, QScrollArea
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent
@@ -23,9 +23,6 @@ class PharmacyPOSApp(QMainWindow):
         # Create a random table with placeholder data
         # self.create_random_table()
 
-        self.showMaximized()  # This will make the window full screen
-        self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
-
         # Set table headers
         headers = ['Product Name', 'Quantity', 'Unit Rate', 'Net Price', 'Remove']
         self.set_table_headers(self.itemCartTable, headers)
@@ -42,11 +39,23 @@ class PharmacyPOSApp(QMainWindow):
         self.cash_return_count_label = self.findChild(QLabel, 'netPriceCountLabel')
         self.price_count_label = self.findChild(QLabel, 'priceCountLabel')
 
+        self.product_scroll_area = QScrollArea()
+        self.product_scroll_area.setWidgetResizable(True)
+
         # Create a ProductView grid layout
         self.productGridLayout = QGridLayout()
         self.productViewWidget = QWidget()
         self.productViewWidget.setLayout(self.productGridLayout)
-        self.rightPOSCol.addWidget(self.productViewWidget)
+        #self.rightPOSCol.addWidget(self.productViewWidget)
+
+        # Set the product view widget as the content of the scroll area
+        self.product_scroll_area.setWidget(self.productViewWidget)
+        self.rightPOSCol.addWidget(self.product_scroll_area)
+
+        # self.productGridLayout = QGridLayout()
+        # self.productViewWidget = QScrollArea()
+        # self.productViewWidget.setLayout(self.productGridLayout)
+        # self.rightPOSCol.addWidget(self.productViewWidget)
 
         self.all_products = self.fetch_all_products() # loading all products in memory
         # Display default products
@@ -91,6 +100,8 @@ class PharmacyPOSApp(QMainWindow):
         self.customerSearchCompleter.setModel(self.customerComboBox.model())
         self.customerComboBox.setCompleter(self.customerSearchCompleter)
 
+        self.showMaximized()  # This will make the window full screen
+        self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
         # self.display_table("SELECT * FROM pharmacy_table")
 
     def eventFilter(self, source, event):
@@ -121,6 +132,11 @@ class PharmacyPOSApp(QMainWindow):
                         return True  # Event handled, don't propagate further
 
         return super().eventFilter(source, event)
+
+    def resizeEvent(self, event):
+        # Override the resize event to update the product grid layout when the window is resized
+        super().resizeEvent(event)
+        self.update_product_grid_layout()
 
     def execute_query(self, query):
         return execute_query(query, self.conn)
@@ -280,6 +296,28 @@ class PharmacyPOSApp(QMainWindow):
         query = "SELECT * FROM pharmacy_table"
         return self.execute_query(query)
 
+    def update_product_grid_layout(self):
+        # Calculate the number of columns based on the available width
+        available_width = self.productViewWidget.width()
+        column_width = 200  # Adjust the column width as needed
+        num_columns = max(1, available_width // column_width)
+
+        # Clear the existing layout
+        for i in reversed(range(self.productGridLayout.count())):
+            widget = self.productGridLayout.itemAt(i).widget()
+            if widget:
+                widget.setParent(None)
+
+        # Add widgets to the layout based on the new number of columns
+        row, col = 0, 0
+        for product_widget in self.product_widgets:
+            self.productGridLayout.addWidget(product_widget, row, col)
+
+            col += 1
+            if col == num_columns:
+                col = 0
+                row += 1
+
     def search_product_locally(self, search_term):
         # Perform a local search on the already fetched products
         results = [product for product in self.all_products if search_term.lower() in product["product_name"].lower()]
@@ -326,6 +364,25 @@ class PharmacyPOSApp(QMainWindow):
 
     def display_search_results(self, results):
         try:
+            # Clear the product grid layout
+            self.clear_product_view()
+
+            # Store product widgets in a list
+            self.product_widgets = []
+
+            # Display the search results in the product view
+            for product in results:
+                product_widget = ProductWidget(product["product_name"], product["quantity"], product["price"])
+                product_widget.clicked.connect(self.add_to_cart)
+                self.product_widgets.append(product_widget)
+
+            # Update the product grid layout
+            self.update_product_grid_layout()
+        except Exception as e:
+            print(f"Exception: {e}")
+
+    """def display_search_results(self, results):
+        try:
             # Display the search results in the product view
             row, col = 0, 0
             for product in results:
@@ -334,11 +391,11 @@ class PharmacyPOSApp(QMainWindow):
                 self.productGridLayout.addWidget(product_widget, row, col)
 
                 col += 1
-                if col == 4:  # Set the number of columns as needed
+                if col == self.productGridLayout.columnCount():  # Set the number of columns as needed
                     col = 0
                     row += 1
         except Exception as e:
-            print(f"Exception: {e}")
+            print(f"Exception: {e}")"""
 
     def fetch_customer_names(self, search_term=None):
         # Define the base query to fetch customer names

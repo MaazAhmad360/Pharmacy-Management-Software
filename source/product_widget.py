@@ -8,7 +8,8 @@ class ProductWidget(QFrame):
     def __init__(self, product_name, stock, price):
         super().__init__()
 
-        self.setMaximumSize(300, 150)
+        self.setMaximumSize(200, 125)
+        self.setMinimumSize(200, 125)
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
         self.setStyleSheet("background-color: rgb(255, 255, 255);")
 
