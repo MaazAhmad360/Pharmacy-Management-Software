@@ -298,7 +298,8 @@ class PharmacyPOSApp(QMainWindow):
 
     def update_product_grid_layout(self):
         # Calculate the number of columns based on the available width
-        available_width = self.productViewWidget.width()
+        # available_width = self.productViewWidget.width()
+        available_width = self.product_scroll_area.viewport().width()
         column_width = 200  # Adjust the column width as needed
         num_columns = max(1, available_width // column_width)
 
