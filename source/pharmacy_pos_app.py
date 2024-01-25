@@ -8,6 +8,7 @@ import pymysql
 from source.product_widget import ProductWidget
 from source.database_helper import connect_to_database, execute_query, execute_query_with_status
 from source.add_customer_dialog import AddCustomerDialog
+from source.product import Product
 
 
 class PharmacyPOSApp(QMainWindow):
@@ -24,7 +25,7 @@ class PharmacyPOSApp(QMainWindow):
         # self.create_random_table()
 
         # Set table headers
-        headers = ['Product Name', 'Quantity', 'Unit Rate', 'Net Price', 'Remove']
+        headers = ['ID', 'Barcode', 'Product Name', 'Formula', 'Quantity', 'Unit Rate', 'Net Price', 'Remove']
         self.set_table_headers(self.itemCartTable, headers)
 
         self.cart_items = {}  # Dictionary to store items in the cart with their quantities
@@ -57,7 +58,12 @@ class PharmacyPOSApp(QMainWindow):
         # self.productViewWidget.setLayout(self.productGridLayout)
         # self.rightPOSCol.addWidget(self.productViewWidget)
 
-        self.all_products = self.fetch_all_products() # loading all products in memory
+        # initializing all products in a list
+        all_products = self.fetch_all_products() # loading all products in memory
+        self.product_list = []
+        for product in all_products:
+            self.product_list.append(Product(product["ProductID"], product["Barcode"], product["Name"], product["ProductGroup"], product["Description"], product["PurchasePrice"], product["SalesPrice"], product["TotalStock"], product["Formula"], product["MinStock"], product["MaxStock"], product["CreationDate"], product["ManufacturerID"]))
+
         # Display default products
         self.display_default_products()
 
@@ -145,15 +151,15 @@ class PharmacyPOSApp(QMainWindow):
         table_widget.setColumnCount(len(headers))
         table_widget.setHorizontalHeaderLabels(headers)
 
-    def add_to_cart(self, name, stock, price):
+    def add_to_cart(self, product):
         # Check if the item is already in the cart
-        if name in self.cart_items:
+        if product.ID in self.cart_items:
             # If yes, increment the quantity
-            self.cart_items[name]['quantity'] += 1
-            self.cart_items[name]['netPrice'] += self.cart_items[name]['price']
+            self.cart_items[product.ID]['quantity'] += 1
+            self.cart_items[product.ID]['netPrice'] += self.cart_items[product.ID]['price']
         else:
             # If not, add it to the cart with quantity 1
-            self.cart_items[name] = {'quantity': 1, 'price': price, 'netPrice': price}
+            self.cart_items[product.ID] = {'barcode': product.barcode, 'name': product.name, 'formula': product.formula, 'quantity': 1, 'price': product.salesPrice, 'netPrice': product.salesPrice}
 
         # Update the cart table
         self.update_cart_table()
@@ -161,12 +167,14 @@ class PharmacyPOSApp(QMainWindow):
         # Update the total price labels
         self.update_total_price_labels()
 
+        # print(self.cart_items)
+
     def update_cart_table(self):
         # Clear the cart table
         self.itemCartTable.setRowCount(0)
 
         # Populate the cart table with items, quantities, and price
-        for product, details in self.cart_items.items():
+        for productID, details in self.cart_items.items():
             row_position = self.itemCartTable.rowCount()
             self.itemCartTable.insertRow(row_position)
 
@@ -179,10 +187,13 @@ class PharmacyPOSApp(QMainWindow):
             remove_button.setStyleSheet("background-color: transparent; border: none;")
 
             # Set the remove button as the widget for the remove column
-            self.itemCartTable.setCellWidget(row_position, 4, remove_button)
+            self.itemCartTable.setCellWidget(row_position, 7, remove_button)
 
             # Set the product name
-            self.itemCartTable.setItem(row_position, 0, QTableWidgetItem(product))
+            self.itemCartTable.setItem(row_position, 0, QTableWidgetItem(str(productID)))
+            self.itemCartTable.setItem(row_position, 1, QTableWidgetItem(str(details['barcode'])))
+            self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(details['name']))
+            self.itemCartTable.setItem(row_position, 3, QTableWidgetItem(details['formula']))
 
             # Create a spin box for the quantity
             quantity_spinbox = QSpinBox()
@@ -191,25 +202,25 @@ class PharmacyPOSApp(QMainWindow):
             quantity_spinbox.valueChanged.connect(self.update_quantity_in_cart)  # Connect the signal for value change
 
             # Set the spin box as the widget for the quantity column
-            self.itemCartTable.setCellWidget(row_position, 1, quantity_spinbox)
+            self.itemCartTable.setCellWidget(row_position, 4, quantity_spinbox)
 
             # Set the price
-            self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(str(details['price'])))
+            self.itemCartTable.setItem(row_position, 5, QTableWidgetItem(str(details['price'])))
 
             totalPrice = details['quantity'] * details['price']
-            self.itemCartTable.setItem(row_position, 3, QTableWidgetItem(str(f"Rs {totalPrice}")))
+            self.itemCartTable.setItem(row_position, 6, QTableWidgetItem(str(f"Rs {totalPrice}")))
 
     def update_quantity_in_cart(self):
         # Update the quantity in the cart_items dictionary when the spin box value changes
         for row in range(self.itemCartTable.rowCount()):
-            product_name = self.itemCartTable.item(row, 0).text()
-            quantity = self.itemCartTable.cellWidget(row, 1).value()
-            price = self.itemCartTable.item(row, 2).text()
+            productID = int(self.itemCartTable.item(row, 0).text())
+            quantity = self.itemCartTable.cellWidget(row, 4).value()
+            price = self.itemCartTable.item(row, 5).text()
 
             totalPrice = quantity * float(price)
-            self.itemCartTable.setItem(row, 3, QTableWidgetItem(str(f"Rs {totalPrice}")))
-            self.cart_items[product_name]['quantity'] = quantity
-            self.cart_items[product_name]['netPrice'] = totalPrice
+            self.itemCartTable.setItem(row, 6, QTableWidgetItem(str(f"Rs {totalPrice}")))
+            self.cart_items[productID]['quantity'] = quantity
+            self.cart_items[productID]['netPrice'] = totalPrice
 
             # Update the cart table
             # self.update_cart_table()
@@ -230,8 +241,8 @@ class PharmacyPOSApp(QMainWindow):
         self.price_count_label.setText(f"Rs {total_price:.2f}")
 
     def remove_from_cart(self, row):
-        item_name = self.itemCartTable.item(row, 0).text()
-        del self.cart_items[item_name]
+        itemID = int(self.itemCartTable.item(row, 0).text())
+        del self.cart_items[itemID]
         self.update_cart_table()
         self.update_total_price_labels()
 
@@ -265,7 +276,7 @@ class PharmacyPOSApp(QMainWindow):
 
     def display_default_products(self):
         # Sample data - replace this with your actual data retrieval logic
-        default_query = "SELECT * FROM pharmacy_table LIMIT 20"
+        # default_query = "SELECT * FROM pharmacy_table LIMIT 20"
         # default_results = self.execute_query(default_query)
 
         """# Create a QWidget instance
@@ -281,7 +292,7 @@ class PharmacyPOSApp(QMainWindow):
 
         # Display the default products in the product view
         # self.display_search_results(default_results)
-        self.display_search_results(self.all_products)
+        self.display_search_results(self.product_list)
 
     def start_product_search_timer(self):
         # Start the timer when text is changed
@@ -293,7 +304,7 @@ class PharmacyPOSApp(QMainWindow):
 
     def fetch_all_products(self):
         # Fetch all products from the database
-        query = "SELECT * FROM pharmacy_table"
+        query = "SELECT * FROM ProductDetails"
         return self.execute_query(query)
 
     def update_product_grid_layout(self):
@@ -321,7 +332,7 @@ class PharmacyPOSApp(QMainWindow):
 
     def search_product_locally(self, search_term):
         # Perform a local search on the already fetched products
-        results = [product for product in self.all_products if search_term.lower() in product["product_name"].lower()]
+        results = [product for product in self.product_list if search_term.lower() in product.name.lower()]
         return results
 
     def search_product(self):
@@ -373,7 +384,7 @@ class PharmacyPOSApp(QMainWindow):
 
             # Display the search results in the product view
             for product in results:
-                product_widget = ProductWidget(product["product_name"], product["quantity"], product["price"])
+                product_widget = ProductWidget(product)
                 product_widget.clicked.connect(self.add_to_cart)
                 self.product_widgets.append(product_widget)
 

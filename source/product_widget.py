@@ -1,11 +1,12 @@
 # source/product_widget.py
 from PyQt5.QtWidgets import QFrame, QVBoxLayout, QLabel, QPushButton, QSpinBox
 from PyQt5.QtCore import pyqtSignal
+from source.product import Product
 
 class ProductWidget(QFrame):
-    clicked = pyqtSignal(str, int, float)
+    clicked = pyqtSignal(Product)
 
-    def __init__(self, product_name, stock, price):
+    def __init__(self, product):
         super().__init__()
 
         self.setMaximumSize(200, 125)
@@ -13,10 +14,12 @@ class ProductWidget(QFrame):
         self.setFrameStyle(QFrame.Box | QFrame.Raised)
         self.setStyleSheet("background-color: rgb(255, 255, 255);")
 
+        self.product = product  # saving the product in the widget to emit as signal
+
         layout = QVBoxLayout()
-        self.product_name_label = QLabel(product_name)
-        self.stock_label = QLabel(f"Stock: {stock}")
-        self.price_label = QLabel(f"Price: Rs {price}")
+        self.product_name_label = QLabel(product.name)
+        self.stock_label = QLabel(f"Stock: {product.totalStock}")
+        self.price_label = QLabel(f"Price: Rs {product.salesPrice}")
         self.add_to_cart_button = QPushButton("+ Add to Cart")
         self.add_to_cart_button.clicked.connect(self.on_add_to_cart)
 
@@ -29,7 +32,5 @@ class ProductWidget(QFrame):
 
     def on_add_to_cart(self):
         self.clicked.emit(
-            self.product_name_label.text(),
-            int(self.stock_label.text().split(":")[-1].strip()),
-            float(self.price_label.text().split(":")[-1].strip().split()[1])
+            self.product
         )
