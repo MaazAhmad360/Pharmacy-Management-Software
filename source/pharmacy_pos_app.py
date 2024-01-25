@@ -48,6 +48,7 @@ class PharmacyPOSApp(QMainWindow):
         self.productViewWidget.setLayout(self.productGridLayout)
         self.rightPOSCol.addWidget(self.productViewWidget)
 
+        self.all_products = self.fetch_all_products() # loading all products in memory
         # Display default products
         self.display_default_products()
 
@@ -120,6 +121,9 @@ class PharmacyPOSApp(QMainWindow):
                         return True  # Event handled, don't propagate further
 
         return super().eventFilter(source, event)
+
+    def execute_query(self, query):
+        return execute_query(query, self.conn)
 
     def set_table_headers(self, table_widget, headers):
         table_widget.setColumnCount(len(headers))
@@ -236,9 +240,6 @@ class PharmacyPOSApp(QMainWindow):
         except pymysql.Error as err:
             QMessageBox.critical(self, "MySQL Error", f"Error: {err}")
 
-    def execute_query(self, query):
-        return execute_query(query, self.conn)
-
     def clear_product_view(self):
         # Clear the product view layout
         for i in reversed(range(self.productGridLayout.count())):
@@ -249,7 +250,7 @@ class PharmacyPOSApp(QMainWindow):
     def display_default_products(self):
         # Sample data - replace this with your actual data retrieval logic
         default_query = "SELECT * FROM pharmacy_table LIMIT 20"
-        default_results = self.execute_query(default_query)
+        # default_results = self.execute_query(default_query)
 
         """# Create a QWidget instance
         layout = QWidget()
@@ -263,7 +264,8 @@ class PharmacyPOSApp(QMainWindow):
         self.productGridLayout.addWidget(layout, 0, 0)"""
 
         # Display the default products in the product view
-        self.display_search_results(default_results)
+        # self.display_search_results(default_results)
+        self.display_search_results(self.all_products)
 
     def start_product_search_timer(self):
         # Start the timer when text is changed
@@ -272,6 +274,16 @@ class PharmacyPOSApp(QMainWindow):
     def delayed_search_product(self):
         # Called when the timer times out (user has stopped typing)
         self.search_product_dynamic()
+
+    def fetch_all_products(self):
+        # Fetch all products from the database
+        query = "SELECT * FROM pharmacy_table"
+        return self.execute_query(query)
+
+    def search_product_locally(self, search_term):
+        # Perform a local search on the already fetched products
+        results = [product for product in self.all_products if search_term.lower() in product["product_name"].lower()]
+        return results
 
     def search_product(self):
         # Clear previous search results
@@ -282,9 +294,10 @@ class PharmacyPOSApp(QMainWindow):
 
         # Perform the search in the database
         if search_term:
-            search_query = f"SELECT * FROM pharmacy_table WHERE product_name LIKE '%{search_term}%'"
+            # search_query = f"SELECT * FROM pharmacy_table WHERE product_name LIKE '%{search_term}%'"
 
-            results = self.execute_query(search_query)
+            # results = self.execute_query(search_query)
+            results = self.search_product_locally(search_term)
 
             # Display the search results in the product view
             self.display_search_results(results)
@@ -301,8 +314,9 @@ class PharmacyPOSApp(QMainWindow):
 
         # Perform the search in the database
         if search_term:
-            search_query = f"SELECT * FROM pharmacy_table WHERE product_name LIKE '%{search_term}%'"
-            results = self.execute_query(search_query)
+            # search_query = f"SELECT * FROM pharmacy_table WHERE product_name LIKE '%{search_term}%'"
+            # results = self.execute_query(search_query)
+            results = self.search_product_locally(search_term)
 
             # Display the search results in the product view
             self.display_search_results(results)
