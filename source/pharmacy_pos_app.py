@@ -28,7 +28,7 @@ class PharmacyPOSApp(QMainWindow):
         # self.create_random_table()
 
         # Set table headers
-        headers = ['ID', 'Barcode', 'Product Name', 'Formula', 'Quantity', 'Unit Rate', 'Net Price', 'Remove']
+        headers = ['ID', 'Barcode', 'Product Name', 'Formula', 'Batch Code', 'Expiry Date', 'Quantity', 'Unit Rate', 'Net Price', 'Remove']
         self.set_table_headers(self.itemCartTable, headers)
 
         self.cart_items = {}  # Dictionary to store items in the cart with their quantities
@@ -181,6 +181,14 @@ class PharmacyPOSApp(QMainWindow):
         query = f"SELECT * FROM {table}"
         return self.execute_query(query)
 
+    def get_expiry_date_for_batch(self, product_id, batch_code):
+        for product in self.product_list:
+            if product_id == product.ID:
+                if product.batches:
+                    for batch in product.batches:
+                        if batch_code == batch.batch_code:
+                            return batch.expiry_date
+
     def add_to_cart(self, product):
         # Check if the item is already in the cart
         if product.ID in self.cart_items:
@@ -189,7 +197,7 @@ class PharmacyPOSApp(QMainWindow):
             self.cart_items[product.ID]['netPrice'] += self.cart_items[product.ID]['price']
         else:
             # If not, add it to the cart with quantity 1
-            self.cart_items[product.ID] = {'barcode': product.barcode, 'name': product.name, 'formula': product.formula, 'quantity': 1, 'price': product.salesPrice, 'netPrice': product.salesPrice}
+            self.cart_items[product.ID] = {'barcode': product.barcode, 'name': product.name, 'formula': product.formula, 'batches': product.batches, 'quantity': 1, 'price': product.salesPrice, 'netPrice': product.salesPrice}
 
         # Update the cart table
         self.update_cart_table()
@@ -217,13 +225,41 @@ class PharmacyPOSApp(QMainWindow):
             remove_button.setStyleSheet("background-color: transparent; border: none;")
 
             # Set the remove button as the widget for the remove column
-            self.itemCartTable.setCellWidget(row_position, 7, remove_button)
+            self.itemCartTable.setCellWidget(row_position, 9, remove_button)
 
             # Set the product name
             self.itemCartTable.setItem(row_position, 0, QTableWidgetItem(str(productID)))
             self.itemCartTable.setItem(row_position, 1, QTableWidgetItem(str(details['barcode'])))
             self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(details['name']))
             self.itemCartTable.setItem(row_position, 3, QTableWidgetItem(details['formula']))
+
+            # Create a Combo Box for Batch Code
+            batch_code_combo_box = QComboBox()
+
+            # Add batch codes to the combo box
+            for batch in details['batches']:
+                # batch_code_combo_box.addItem(batch['batchCode'])
+                batch_code_combo_box.addItem(batch.batch_code)
+
+            # Set the current index of the combo box based on the selected batch code
+            selected_batch_code = details.get('selectedBatchCode', '')
+            if selected_batch_code:
+                index = batch_code_combo_box.findText(selected_batch_code)
+            else:
+                index = 0
+            batch_code_combo_box.setCurrentIndex(index)
+
+            if batch_code_combo_box.currentText():  # add expiry date if batch exists
+                self.itemCartTable.setItem(row_position, 5, QTableWidgetItem(str(details["batches"][index].expiry_date)))
+
+            # Connect the combo box signal to update the expiry date
+            batch_code_combo_box.currentIndexChanged.connect(lambda _, row=row_position: self.update_expiry_date(row))
+
+            # Update the 'selectedBatchCode' in the details dictionary
+            details['selectedBatchCode'] = batch_code_combo_box.currentText()
+
+            # Set the combo box as the widget for the batch code column
+            self.itemCartTable.setCellWidget(row_position, 4, batch_code_combo_box)
 
             # Create a spin box for the quantity
             quantity_spinbox = QSpinBox()
@@ -232,23 +268,37 @@ class PharmacyPOSApp(QMainWindow):
             quantity_spinbox.valueChanged.connect(self.update_quantity_in_cart)  # Connect the signal for value change
 
             # Set the spin box as the widget for the quantity column
-            self.itemCartTable.setCellWidget(row_position, 4, quantity_spinbox)
+            self.itemCartTable.setCellWidget(row_position, 6, quantity_spinbox)
 
             # Set the price
-            self.itemCartTable.setItem(row_position, 5, QTableWidgetItem(str(details['price'])))
+            self.itemCartTable.setItem(row_position, 7, QTableWidgetItem(str(details['price'])))
 
             totalPrice = details['quantity'] * details['price']
-            self.itemCartTable.setItem(row_position, 6, QTableWidgetItem(str(f"Rs {totalPrice}")))
+            self.itemCartTable.setItem(row_position, 8, QTableWidgetItem(str(f"Rs {totalPrice}")))
+
+    def update_expiry_date(self, row):
+        # Get the selected batch code from the combo box
+        batch_code_combo_box = self.itemCartTable.cellWidget(row, 4)
+        selected_batch_code = batch_code_combo_box.currentText()
+
+        product_id = int(self.itemCartTable.item(row, 0).text())
+
+        # Get the expiry date based on the selected batch code
+        # (You need to implement the logic to fetch the expiry date)
+        expiry_date = self.get_expiry_date_for_batch(product_id, selected_batch_code)
+
+        # Update the expiry date column in the cart table
+        self.itemCartTable.setItem(row, 5, QTableWidgetItem(str(expiry_date)))
 
     def update_quantity_in_cart(self):
         # Update the quantity in the cart_items dictionary when the spin box value changes
         for row in range(self.itemCartTable.rowCount()):
             productID = int(self.itemCartTable.item(row, 0).text())
-            quantity = self.itemCartTable.cellWidget(row, 4).value()
-            price = self.itemCartTable.item(row, 5).text()
+            quantity = self.itemCartTable.cellWidget(row, 6).value()
+            price = self.itemCartTable.item(row, 7).text()
 
             totalPrice = quantity * float(price)
-            self.itemCartTable.setItem(row, 6, QTableWidgetItem(str(f"Rs {totalPrice}")))
+            self.itemCartTable.setItem(row, 8, QTableWidgetItem(str(f"Rs {totalPrice}")))
             self.cart_items[productID]['quantity'] = quantity
             self.cart_items[productID]['netPrice'] = totalPrice
 

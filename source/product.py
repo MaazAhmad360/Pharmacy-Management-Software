@@ -27,6 +27,9 @@ class Product:
     def add_batch(self, batch):
         self.batches.append(batch)
         self.update_expiry_date()
+        self.sort_batches_by_expiry_date()
+    def sort_batches_by_expiry_date(self):
+        self.batches.sort(key=lambda x: x.expiry_date)
 
     def update_expiry_date(self):
         self.earliest_expiry_date = min(batch.expiry_date for batch in self.batches)
