@@ -269,9 +269,9 @@
                <item>
                 <layout class="QHBoxLayout" name="horizontalLayout_2">
                  <item>
-                  <widget class="QPushButton" name="cancelBtn">
+                  <widget class="QPushButton" name="clearBtn">
                    <property name="text">
-                    <string>Cancel</string>
+                    <string>Clear</string>
                    </property>
                   </widget>
                  </item>
