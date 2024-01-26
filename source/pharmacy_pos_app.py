@@ -9,6 +9,7 @@ from source.product_widget import ProductWidget
 from source.database_helper import connect_to_database, execute_query, execute_query_with_status
 from source.add_customer_dialog import AddCustomerDialog
 from source.product import Product
+from source.batch import Batch
 
 
 class PharmacyPOSApp(QMainWindow):
@@ -63,6 +64,14 @@ class PharmacyPOSApp(QMainWindow):
         self.product_list = []
         for product in all_products:
             self.product_list.append(Product(product["ProductID"], product["Barcode"], product["Name"], product["ProductGroup"], product["Description"], product["PurchasePrice"], product["SalesPrice"], product["TotalStock"], product["Formula"], product["MinStock"], product["MaxStock"], product["CreationDate"], product["ManufacturerID"]))
+
+        all_batches = self.fetch_all_batches()  # loading all batches in memory
+        self.batch_list = []
+        for batch in all_batches:
+            self.batch_list.append(Batch(batch["BatchID"], batch["BatchCode"], batch["ArrivalDate"], batch["ManufacturinDate"], batch["ExpiryDate"], batch["Quantity"]))
+            for product in self.product_list:
+                if int(batch["ProductID"]) is product.ID:
+                    product.add_batch(self.batch_list[-1])
 
         # Display default products
         self.display_default_products()
@@ -150,6 +159,16 @@ class PharmacyPOSApp(QMainWindow):
     def set_table_headers(self, table_widget, headers):
         table_widget.setColumnCount(len(headers))
         table_widget.setHorizontalHeaderLabels(headers)
+
+    def fetch_all_products(self):
+        # Fetch all products from the database
+        query = "SELECT * FROM ProductDetails"
+        return self.execute_query(query)
+
+    def fetch_all_batches(self):
+        # Fetch all products from the database
+        query = "SELECT * FROM Batches"
+        return self.execute_query(query)
 
     def add_to_cart(self, product):
         # Check if the item is already in the cart
@@ -301,11 +320,6 @@ class PharmacyPOSApp(QMainWindow):
     def delayed_search_product(self):
         # Called when the timer times out (user has stopped typing)
         self.search_product_dynamic()
-
-    def fetch_all_products(self):
-        # Fetch all products from the database
-        query = "SELECT * FROM ProductDetails"
-        return self.execute_query(query)
 
     def update_product_grid_layout(self):
         # Calculate the number of columns based on the available width
