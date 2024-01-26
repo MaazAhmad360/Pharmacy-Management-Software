@@ -1,5 +1,5 @@
 # pharmacy_pos_app.py
-from source.globals import PHARMACY_TABLE, PRODUCT_TABLE, BATCHES_TABLE, VENDORS_TABLE
+from source.globals import *
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, \
     QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox, QScrollArea
 from PyQt5 import uic
@@ -12,6 +12,7 @@ from source.add_customer_dialog import AddCustomerDialog
 from source.product import Product
 from source.batch import Batch
 from source.vendor import Vendor
+from source.customer import Customer
 
 
 class PharmacyPOSApp(QMainWindow):
@@ -26,6 +27,8 @@ class PharmacyPOSApp(QMainWindow):
 
         # Create a random table with placeholder data
         # self.create_random_table()
+
+        self.clearBtn.clicked.connect(self.remove_all_from_cart)
 
         # Set table headers
         headers = ['ID', 'Barcode', 'Product Name', 'Formula', 'Batch Code', 'Expiry Date', 'Quantity', 'Unit Rate', 'Net Price', 'Remove']
@@ -88,6 +91,10 @@ class PharmacyPOSApp(QMainWindow):
                 if int(batch["ProductID"]) is product.ID:
                     product.add_batch(self.batch_list[-1])
 
+        all_customers = self.fetch_all(CUSTOMERS_TABLE)
+        self.customer_list = []
+        for customer in all_customers:
+            self.customer_list.append(Customer(customer["CustomerID"], customer["Name"], customer["Address"], customer["Contact"]))
 
         # Display default products
         self.display_default_products()
@@ -326,6 +333,13 @@ class PharmacyPOSApp(QMainWindow):
         self.update_cart_table()
         self.update_total_price_labels()
 
+    def remove_all_from_cart(self):
+        for i in range(len(self.cart_items)):
+            itemID = int(self.itemCartTable.item(i, 0).text())
+            del self.cart_items[itemID]
+        self.update_cart_table()
+        self.update_total_price_labels()
+
     def display_table(self, query):
         try:
             with self.conn.cursor() as cursor:
@@ -484,9 +498,12 @@ class PharmacyPOSApp(QMainWindow):
         except Exception as e:
             print(f"Exception: {e}")"""
 
-    def fetch_customer_names(self, search_term=None):
-        # Define the base query to fetch customer names
-        base_query = "SELECT DISTINCT Name FROM Customers"
+    def fetch_customer_names(self, customer_list):
+        customer_names = [customer.name for customer in customer_list]
+        return customer_names
+
+        """# Define the base query to fetch customer names
+        # base_query = "SELECT DISTINCT Name FROM Customers"
 
         # If a search term is provided, add it to the query
         if search_term:
@@ -503,11 +520,17 @@ class PharmacyPOSApp(QMainWindow):
                 return customer_names
         except pymysql.Error as e:
             print(f"Error fetching customer names: {e}")
-            return []
+            return []"""
 
     def populate_customer_names(self, search_term=None):
+        all_customers = self.fetch_all(CUSTOMERS_TABLE)
+        self.customer_list = []
+        for customer in all_customers:
+            self.customer_list.append(
+                Customer(customer["CustomerID"], customer["Name"], customer["Address"], customer["Contact"]))
+
         # Fetch the list of customer names from the database based on the search term
-        customer_names = self.fetch_customer_names(search_term)
+        customer_names = self.fetch_customer_names(self.customer_list)
 
         # Clear existing items and populate the names in the combo box
         self.customerComboBox.clear()
