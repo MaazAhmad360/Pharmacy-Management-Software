@@ -1,4 +1,5 @@
 # pharmacy_pos_app.py
+from source.globals import PHARMACY_TABLE, PRODUCT_TABLE, BATCHES_TABLE, VENDORS_TABLE
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, \
     QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox, QScrollArea
 from PyQt5 import uic
@@ -10,6 +11,7 @@ from source.database_helper import connect_to_database, execute_query, execute_q
 from source.add_customer_dialog import AddCustomerDialog
 from source.product import Product
 from source.batch import Batch
+from source.vendor import Vendor
 
 
 class PharmacyPOSApp(QMainWindow):
@@ -60,18 +62,32 @@ class PharmacyPOSApp(QMainWindow):
         # self.rightPOSCol.addWidget(self.productViewWidget)
 
         # initializing all products in a list
-        all_products = self.fetch_all_products() # loading all products in memory
+        all_products = self.fetch_all(PRODUCT_TABLE) # loading all products in memory
         self.product_list = []
         for product in all_products:
             self.product_list.append(Product(product["ProductID"], product["Barcode"], product["Name"], product["ProductGroup"], product["Description"], product["PurchasePrice"], product["SalesPrice"], product["TotalStock"], product["Formula"], product["MinStock"], product["MaxStock"], product["CreationDate"], product["ManufacturerID"]))
 
-        all_batches = self.fetch_all_batches()  # loading all batches in memory
+        # initialing all vendors in a list
+        all_vendors = self.fetch_all(VENDORS_TABLE)
+        self.vendor_list = []
+        for vendor in all_vendors:
+            self.vendor_list.append(Vendor(vendor["VendorID"], vendor["Name"], vendor["Address"], vendor["City"],))
+
+        # initializing all batches in a list
+        all_batches = self.fetch_all(BATCHES_TABLE)  # loading all batches in memory
         self.batch_list = []
         for batch in all_batches:
-            self.batch_list.append(Batch(batch["BatchID"], batch["BatchCode"], batch["ArrivalDate"], batch["ManufacturinDate"], batch["ExpiryDate"], batch["Quantity"]))
-            for product in self.product_list:
+            self.batch_list.append(Batch(batch["BatchID"], batch["BatchCode"], batch["ArrivalDate"], batch["ManufacturingDate"], batch["ExpiryDate"], batch["Quantity"]))
+
+            self.batch_list[-1].add_vendor(next((vendor for vendor in self.vendor_list if int(batch["VendorID"]) == vendor.ID), None))  # find the matching vendorID from the vendorlist and reference it in the batch instance - same purpose as the one commented below
+            """for vendor in self.vendor_list:  # referencing the appropriate vendor through ID
+                if int(batch["VendorID"]) is vendor.ID:
+                    self.batch_list[-1].add_vendor(vendor)"""
+
+            for product in self.product_list:  # associating the batch with the appropriate product
                 if int(batch["ProductID"]) is product.ID:
                     product.add_batch(self.batch_list[-1])
+
 
         # Display default products
         self.display_default_products()
@@ -160,14 +176,9 @@ class PharmacyPOSApp(QMainWindow):
         table_widget.setColumnCount(len(headers))
         table_widget.setHorizontalHeaderLabels(headers)
 
-    def fetch_all_products(self):
+    def fetch_all(self, table):
         # Fetch all products from the database
-        query = "SELECT * FROM ProductDetails"
-        return self.execute_query(query)
-
-    def fetch_all_batches(self):
-        # Fetch all products from the database
-        query = "SELECT * FROM Batches"
+        query = f"SELECT * FROM {table}"
         return self.execute_query(query)
 
     def add_to_cart(self, product):
