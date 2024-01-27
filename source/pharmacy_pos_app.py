@@ -1,5 +1,6 @@
 # pharmacy_pos_app.py
 from source.globals import *
+import datetime
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, \
     QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox, QScrollArea
 from PyQt5 import uic
@@ -29,6 +30,7 @@ class PharmacyPOSApp(QMainWindow):
         # self.create_random_table()
 
         self.clearBtn.clicked.connect(self.remove_all_from_cart)
+        self.payBtn.clicked.connect(self.cart_checkout)
 
         # Set table headers
         headers = ['ID', 'Barcode', 'Product Name', 'Formula', 'Batch Code', 'Expiry Date', 'Quantity', 'Unit Rate', 'Net Price', 'Remove']
@@ -196,6 +198,14 @@ class PharmacyPOSApp(QMainWindow):
                         if batch_code == batch.batch_code:
                             return batch.expiry_date
 
+    def get_batch_id(self, product_id, batch_code):
+        for product in self.product_list:
+            if product_id == product.ID:
+                if product.batches:
+                    for batch in product.batches:
+                        if batch_code == batch.batch_code:
+                            return batch.ID
+
     def add_to_cart(self, product):
         # Check if the item is already in the cart
         if product.ID in self.cart_items:
@@ -251,10 +261,11 @@ class PharmacyPOSApp(QMainWindow):
             # Set the current index of the combo box based on the selected batch code
             selected_batch_code = details.get('selectedBatchCode', '')
             if selected_batch_code:
-                index = batch_code_combo_box.findText(selected_batch_code)
+                index = batch_code_combo_box.findText(selected_batch_code) # retrieving the index of the selected batch Code
             else:
                 index = 0
             batch_code_combo_box.setCurrentIndex(index)
+            details['selectedBatchID'] = details['batches'][index].ID
 
             if batch_code_combo_box.currentText():  # add expiry date if batch exists
                 self.itemCartTable.setItem(row_position, 5, QTableWidgetItem(str(details["batches"][index].expiry_date)))
@@ -280,7 +291,7 @@ class PharmacyPOSApp(QMainWindow):
             # Set the price
             self.itemCartTable.setItem(row_position, 7, QTableWidgetItem(str(details['price'])))
 
-            totalPrice = details['quantity'] * details['price']
+            totalPrice = "%.2f" % (details['quantity'] * details['price'])
             self.itemCartTable.setItem(row_position, 8, QTableWidgetItem(str(f"Rs {totalPrice}")))
 
     def update_expiry_date(self, row):
@@ -294,6 +305,7 @@ class PharmacyPOSApp(QMainWindow):
         # (You need to implement the logic to fetch the expiry date)
         expiry_date = self.get_expiry_date_for_batch(product_id, selected_batch_code)
 
+
         # Update the expiry date column in the cart table
         self.itemCartTable.setItem(row, 5, QTableWidgetItem(str(expiry_date)))
 
@@ -304,7 +316,7 @@ class PharmacyPOSApp(QMainWindow):
             quantity = self.itemCartTable.cellWidget(row, 6).value()
             price = self.itemCartTable.item(row, 7).text()
 
-            totalPrice = quantity * float(price)
+            totalPrice = "%.2f" % (quantity * float(price))
             self.itemCartTable.setItem(row, 8, QTableWidgetItem(str(f"Rs {totalPrice}")))
             self.cart_items[productID]['quantity'] = quantity
             self.cart_items[productID]['netPrice'] = totalPrice
@@ -360,6 +372,57 @@ class PharmacyPOSApp(QMainWindow):
 
         except pymysql.Error as err:
             QMessageBox.critical(self, "MySQL Error", f"Error: {err}")
+
+    def cart_checkout(self):
+        if self.cart_items:
+            if self.customerComboBox.currentIndex != -1:
+                customer_name = self.customerComboBox.currentText()
+                customer_id = self.find_customer_id(customer_name)
+                total_price = float(self.cash_return_count_label.text().split()[-1])
+                total_items = int(self.total_items_count_label.text())
+                current_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+
+                query = f"INSERT INTO Sales (CustomerID, SaleDate, TotalPrice, TotalItems) VALUES ({customer_id}, '{current_date}', {total_price}, {total_items})"
+                checkout_success = execute_query_with_status(query, self.conn)
+
+                successDialog = QMessageBox()
+                if checkout_success:
+                    sales_id = self.fetch_new_sale_id()
+                    self.update_sale_details(sales_id)
+                    self.remove_all_from_cart()
+                    successDialog.setText("Payment Success")
+
+                else:
+                    successDialog.setText("Payment Failed")
+                successDialog.exec_()
+
+    def fetch_new_sale_id(self):
+        query_sales_id = "SELECT LAST_INSERT_ID() AS NewSalesID"
+        result = execute_query(query_sales_id, self.conn)
+        return result[0]['NewSalesID']
+
+    def update_sale_details(self, sale_id):
+        # Iterate through the cart items and insert into SaleItems table
+        # i = 0
+        for product_id, details in self.cart_items.items():
+            quantity = details['quantity']
+            sales_price = details['price']
+            net_price = details['netPrice']
+            batch_id = details['selectedBatchID']
+
+            # Insert statement for each item in the sale
+            sale_item_query = f"INSERT INTO SaleDetails (SaleID, BatchID, ProductID, QuantitySold, SalePrice, NetPrice) " \
+                              f"VALUES ({sale_id}, {batch_id}, {product_id}, {quantity}, {sales_price}, {net_price})"
+
+            # Execute the sale_item_query
+            execute_query_with_status(sale_item_query, self.conn)
+            # cursor.execute(sale_item_query)
+
+    def find_customer_id(self, name):
+        if name:
+            for customer in self.customer_list:
+                if name == customer.name:
+                    return customer.ID
 
     def clear_product_view(self):
         # Clear the product view layout
