@@ -14,6 +14,7 @@ from source.product import Product
 from source.batch import Batch
 from source.vendor import Vendor
 from source.customer import Customer
+from source.main_header_widget import MainHeader
 
 
 # TODO: Add to Cart only if Batch Present
