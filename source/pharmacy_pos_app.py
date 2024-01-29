@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLab
     QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox, QScrollArea
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent
+from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent, QPropertyAnimation, QRect
 import pymysql
 from source.product_widget import ProductWidget
 from source.database_helper import connect_to_database, execute_query, execute_query_with_status
@@ -15,6 +15,7 @@ from source.batch import Batch
 from source.vendor import Vendor
 from source.customer import Customer
 from source.main_header_widget import MainHeader
+from source.main_menu import SlidingMenu
 
 
 # TODO: Add to Cart only if Batch Present
@@ -71,6 +72,8 @@ class PharmacyPOSApp(QMainWindow):
         # Load the UI file
         uic.loadUi('ui/mainwindow.ui', self)
 
+        self.init_menu()
+
         self.init_cart()
 
         self.init_product_grid()
@@ -79,6 +82,17 @@ class PharmacyPOSApp(QMainWindow):
 
         self.showMaximized()  # This will make the window full screen
         self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
+
+    def init_menu(self):
+        self.menu = SlidingMenu()
+        self.menu_width = self.menu.width()
+        self.menu_hidden = True
+
+        self.inventory_btn.clicked.connect(self.toggle_menu)
+
+        self.hide_menu(100)
+
+        self.gridLayout.addWidget(self.menu, 0, 0, alignment=Qt.AlignTop)
 
     def init_customer(self):
         # Get reference to widgets
@@ -191,17 +205,41 @@ class PharmacyPOSApp(QMainWindow):
 
         return super().eventFilter(source, event)
 
-    def resizeEvent(self, event):
-        # Override the resize event to update the product grid layout when the window is resized
-        super().resizeEvent(event)
-        self.update_product_grid_layout()
-
     def execute_query(self, query):
         return execute_query(query, self.conn)
 
     def set_table_headers(self, table_widget, headers):
         table_widget.setColumnCount(len(headers))
         table_widget.setHorizontalHeaderLabels(headers)
+
+    def resizeEvent(self, event):
+        # Override the resize event to update the product grid layout when the window is resized
+        super().resizeEvent(event)
+        self.update_product_grid_layout()
+
+    def toggle_menu(self):
+        if self.menu_hidden:
+            self.show_menu()
+        else:
+            self.hide_menu()
+
+    def show_menu(self):
+        self.menu_animation = QPropertyAnimation(self.menu, b"geometry")
+        self.menu_animation.setDuration(300)
+        self.menu_animation.setStartValue(QRect(-self.menu_width, 0, self.menu_width, self.height()))
+        self.menu_animation.setEndValue(QRect(0, 0, self.menu_width, self.height()))
+        self.menu_animation.start()
+
+        self.menu_hidden = False
+
+    def hide_menu(self, animation_time = 300):
+        self.menu_animation = QPropertyAnimation(self.menu, b"geometry")
+        self.menu_animation.setDuration(animation_time)
+        self.menu_animation.setStartValue(QRect(0, 0, self.menu_width, self.height()))
+        self.menu_animation.setEndValue(QRect(-self.menu_width, 0, self.menu_width, self.height()))
+        self.menu_animation.start()
+
+        self.menu_hidden = True
 
     def fetch_all(self, table):
         # Fetch all products from the database
