@@ -16,6 +16,8 @@ from source.vendor import Vendor
 from source.customer import Customer
 
 
+# TODO: Add to Cart only if Batch Present
+# TODO: No Payment on empty cart
 class PharmacyPOSApp(QMainWindow):
     def __init__(self):
         super().__init__()
