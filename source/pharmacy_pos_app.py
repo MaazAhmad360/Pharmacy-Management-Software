@@ -23,51 +23,13 @@ class PharmacyPOSApp(QMainWindow):
     def __init__(self):
         super().__init__()
 
-        # Load the UI file
-        uic.loadUi('ui/mainwindow.ui', self)
-
         # Connect to MySQL database
         self.conn = connect_to_database()
 
         # Create a random table with placeholder data
         # self.create_random_table()
 
-        self.clearBtn.clicked.connect(self.remove_all_from_cart)
-        self.payBtn.clicked.connect(self.cart_checkout)
-
-        # Set table headers
-        headers = ['ID', 'Barcode', 'Product Name', 'Formula', 'Batch Code', 'Expiry Date', 'Quantity', 'Unit Rate', 'Net Price', 'Remove']
-        self.set_table_headers(self.itemCartTable, headers)
-
         self.cart_items = {}  # Dictionary to store items in the cart with their quantities
-
-        # Get reference to widgets
-        self.customerComboBox = self.findChild(QComboBox, 'customerSelect')
-        self.addCustomerButton = self.findChild(QPushButton, 'addCustomerBtn')
-
-        # Get references to the labels
-        self.total_items_count_label = self.findChild(QLabel, 'totalItemsCountLabel')
-        self.discount_input = self.findChild(QLineEdit, 'discountInput')
-        self.cash_return_count_label = self.findChild(QLabel, 'netPriceCountLabel')
-        self.price_count_label = self.findChild(QLabel, 'priceCountLabel')
-
-        self.product_scroll_area = QScrollArea()
-        self.product_scroll_area.setWidgetResizable(True)
-
-        # Create a ProductView grid layout
-        self.productGridLayout = QGridLayout()
-        self.productViewWidget = QWidget()
-        self.productViewWidget.setLayout(self.productGridLayout)
-        #self.rightPOSCol.addWidget(self.productViewWidget)
-
-        # Set the product view widget as the content of the scroll area
-        self.product_scroll_area.setWidget(self.productViewWidget)
-        self.rightPOSCol.addWidget(self.product_scroll_area)
-
-        # self.productGridLayout = QGridLayout()
-        # self.productViewWidget = QScrollArea()
-        # self.productViewWidget.setLayout(self.productGridLayout)
-        # self.rightPOSCol.addWidget(self.productViewWidget)
 
         # initializing all products in a list
         all_products = self.fetch_all(PRODUCT_TABLE) # loading all products in memory
@@ -101,22 +63,28 @@ class PharmacyPOSApp(QMainWindow):
         for customer in all_customers:
             self.customer_list.append(Customer(customer["CustomerID"], customer["Name"], customer["Address"], customer["Contact"]))
 
-        # Display default products
-        self.display_default_products()
+        self.init_ui()
 
-        # Create a QTimer for dynamic product search
-        # self.product_search_timer = QTimer()
-        # self.product_search_timer.timeout.connect(self.delayed_search_product)
+        # self.display_table("SELECT * FROM pharmacy_table")
 
-        # Connect the search button to the search_product function
-        self.productSearchRightBtn.clicked.connect(self.search_product)
+    def init_ui(self):
+        # Load the UI file
+        uic.loadUi('ui/mainwindow.ui', self)
 
-        # Connect the text changed signal to the search_product_dynamic function
-        self.productSearchRightInput.textChanged.connect(self.search_product_dynamic)
-        self.productSearchRightInput.setPlaceholderText("Search Products")
+        self.init_cart()
 
-        # Connect the text changed signal to start the timer
-        # self.productSearchRightInput.textChanged.connect(self.start_product_search_timer)
+        self.init_product_grid()
+
+        self.init_customer()
+
+        self.showMaximized()  # This will make the window full screen
+        self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
+
+    def init_customer(self):
+        # Get reference to widgets
+        self.customerComboBox = self.findChild(QComboBox, 'customerSelect')
+        self.addCustomerButton = self.findChild(QPushButton, 'addCustomerBtn')
+
 
         # Set up customerComboBox settings
         self.customerComboBox.setEditable(True)
@@ -143,9 +111,56 @@ class PharmacyPOSApp(QMainWindow):
         self.customerSearchCompleter.setModel(self.customerComboBox.model())
         self.customerComboBox.setCompleter(self.customerSearchCompleter)
 
-        self.showMaximized()  # This will make the window full screen
-        self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
-        # self.display_table("SELECT * FROM pharmacy_table")
+    def init_product_grid(self):
+        self.product_scroll_area = QScrollArea()
+        self.product_scroll_area.setWidgetResizable(True)
+
+        # Create a ProductView grid layout
+        self.productGridLayout = QGridLayout()
+        self.productViewWidget = QWidget()
+        self.productViewWidget.setLayout(self.productGridLayout)
+        #self.rightPOSCol.addWidget(self.productViewWidget)
+
+        # Set the product view widget as the content of the scroll area
+        self.product_scroll_area.setWidget(self.productViewWidget)
+        self.rightPOSCol.addWidget(self.product_scroll_area)
+
+        # self.productGridLayout = QGridLayout()
+        # self.productViewWidget = QScrollArea()
+        # self.productViewWidget.setLayout(self.productGridLayout)
+        # self.rightPOSCol.addWidget(self.productViewWidget)
+
+        # Display default products
+        self.display_default_products()
+
+        # Create a QTimer for dynamic product search
+        # self.product_search_timer = QTimer()
+        # self.product_search_timer.timeout.connect(self.delayed_search_product)
+
+        # Connect the search button to the search_product function
+        self.productSearchRightBtn.clicked.connect(self.search_product)
+
+        # Connect the text changed signal to the search_product_dynamic function
+        self.productSearchRightInput.textChanged.connect(self.search_product_dynamic)
+        self.productSearchRightInput.setPlaceholderText("Search Products")
+
+        # Connect the text changed signal to start the timer
+        # self.productSearchRightInput.textChanged.connect(self.start_product_search_timer)
+
+    def init_cart(self):
+        self.clearBtn.clicked.connect(self.remove_all_from_cart)
+        self.payBtn.clicked.connect(self.cart_checkout)
+
+        # Set table headers
+        headers = ['ID', 'Barcode', 'Product Name', 'Formula', 'Batch Code', 'Expiry Date', 'Quantity', 'Unit Rate',
+                   'Net Price', 'Remove']
+        self.set_table_headers(self.itemCartTable, headers)
+
+        # Get references to the labels
+        self.total_items_count_label = self.findChild(QLabel, 'totalItemsCountLabel')
+        self.discount_input = self.findChild(QLineEdit, 'discountInput')
+        self.cash_return_count_label = self.findChild(QLabel, 'netPriceCountLabel')
+        self.price_count_label = self.findChild(QLabel, 'priceCountLabel')
 
     def eventFilter(self, source, event):
         if event.type() == QEvent.FocusIn and source is self.customerComboBox:
