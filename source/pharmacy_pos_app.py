@@ -15,11 +15,13 @@ from source.batch import Batch
 from source.vendor import Vendor
 from source.customer import Customer
 from source.main_header_widget import MainHeader
-from source.main_menu import SlidingMenu
+#from source.main_menu import SlidingMenu
 
 
 # TODO: Add to Cart only if Batch Present
 # TODO: No Payment on empty cart
+# TODO: Customer Validation Before Payment
+# TODO: Add Menu Animation (Currently Commented init_menu())
 class PharmacyPOSApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -72,7 +74,7 @@ class PharmacyPOSApp(QMainWindow):
         # Load the UI file
         uic.loadUi('ui/mainwindow.ui', self)
 
-        self.init_menu()
+        # self.init_menu()
 
         self.init_cart()
 
@@ -84,15 +86,50 @@ class PharmacyPOSApp(QMainWindow):
         self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
 
     def init_menu(self):
+        self.dashboard_btn = self.findChild(QPushButton, 'menu_dashboard_btn')
+        self.inventory_btn = self.findChild(QPushButton, 'menu_inventory_btn')
+
+        self.dashbaord_icon = QIcon("assets/cross.svg")
+        self.inventory_icon = QIcon("assets/cross.svg")
+
+        # Create a button with icon only for both states
+        self.dashboard_btn = QPushButton(self.dashbaord_icon, "")
+        self.inventory_btn = QPushButton(self.inventory_icon, "")
+        self.dashboard_btn.setCheckable(True)
+        self.inventory_btn.setCheckable(True)
+        self.dashboard_btn.setIconSize(self.dashboard_btn.sizeHint())  # Set the icon size to match the button size
+        self.inventory_btn.setIconSize(self.inventory_btn.sizeHint())  # Set the icon size to match the button size
+        self.dashboard_btn.setStyleSheet("text-align: left;")
+        self.inventory_btn.setStyleSheet("text-align: left;")
+
+        # Initially hide the button text
+        self.dashboard_btn.setChecked(True)
+        self.inventory_btn.setChecked(True)
+        self.collapse_btn = False
+        self.dashboard_btn.clicked.connect(self.toggle_button_text)
+        self.inventory_btn.clicked.connect(self.toggle_button_text)
+
+        padding = 10  # Adjust the padding as needed
+        self.collapsed_width = self.dashboard_btn.sizeHint().width() + padding  # Set the width of the collapsed menu
+        self.expanded_width = 200  # Set the width of the expanded menu
+
+        self.menu_hidden = True
+
+        self.push_btn.clicked.connect(self.toggle_menu)
+
+        self.hide_menu()
+
+        # self.button.setLayoutDirection(Qt.lef)
+        """def init_menu(self):
         self.menu = SlidingMenu()
         self.menu_width = self.menu.width()
         self.menu_hidden = True
 
         self.inventory_btn.clicked.connect(self.toggle_menu)
 
-        self.hide_menu(100)
+        self.hide_menu()
 
-        self.gridLayout.addWidget(self.menu, 0, 0, alignment=Qt.AlignTop)
+        self.gridLayout.addWidget(self.menu, 0, 0)"""
 
     def init_customer(self):
         # Get reference to widgets
@@ -217,27 +254,49 @@ class PharmacyPOSApp(QMainWindow):
         super().resizeEvent(event)
         self.update_product_grid_layout()
 
+    def toggle_button_text(self):
+        if self.collapse_btn:
+            self.dashboard_btn.setIcon(self.dashbaord_icon)
+            self.dashboard_btn.setText("")
+            self.inventory_btn.setIcon(self.inventory_icon)
+            self.inventory_btn.setText("")
+        else:
+            self.dashboard_btn.setIcon(self.dashbaord_icon)
+            self.dashboard_btn.setText("Dashboard")
+            self.inventory_btn.setIcon(self.inventory_icon)
+            self.inventory_btn.setText("Inventory")
+
     def toggle_menu(self):
         if self.menu_hidden:
             self.show_menu()
         else:
             self.hide_menu()
+        self.toggle_button_text()
 
     def show_menu(self):
-        self.menu_animation = QPropertyAnimation(self.menu, b"geometry")
+        self.menu_animation = QPropertyAnimation(self.main_menu_widget, b"minimumWidth")
         self.menu_animation.setDuration(300)
-        self.menu_animation.setStartValue(QRect(-self.menu_width, 0, self.menu_width, self.height()))
-        self.menu_animation.setEndValue(QRect(0, 0, self.menu_width, self.height()))
+        self.menu_animation.setStartValue(self.collapsed_width)
+        self.menu_animation.setEndValue(self.expanded_width)
         self.menu_animation.start()
 
+        # Toggle the button text and icon
+        self.dashboard_btn.setChecked(False)
+        self.inventory_btn.setChecked(False)
+        self.collapse_btn = False
         self.menu_hidden = False
 
-    def hide_menu(self, animation_time = 300):
-        self.menu_animation = QPropertyAnimation(self.menu, b"geometry")
-        self.menu_animation.setDuration(animation_time)
-        self.menu_animation.setStartValue(QRect(0, 0, self.menu_width, self.height()))
-        self.menu_animation.setEndValue(QRect(-self.menu_width, 0, self.menu_width, self.height()))
+    def hide_menu(self):
+        self.menu_animation = QPropertyAnimation(self.main_menu_widget, b"minimumWidth")
+        self.menu_animation.setDuration(300)
+        self.menu_animation.setStartValue(self.expanded_width)
+        self.menu_animation.setEndValue(self.collapsed_width)
         self.menu_animation.start()
+
+        # Toggle the button text and icon
+        self.dashboard_btn.setChecked(True)
+        self.inventory_btn.setChecked(True)
+        self.collapse_btn = True
 
         self.menu_hidden = True
 
