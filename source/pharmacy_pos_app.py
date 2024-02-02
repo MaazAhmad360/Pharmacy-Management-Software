@@ -2,7 +2,7 @@
 from source.globals import *
 import datetime
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, \
-    QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox, QScrollArea
+    QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox, QScrollArea, QStackedWidget
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent, QPropertyAnimation, QRect
@@ -16,6 +16,7 @@ from source.vendor import Vendor
 from source.customer import Customer
 from source.main_header_widget import MainHeader
 #from source.main_menu import SlidingMenu
+from source.product_page import ProductPage
 
 
 # TODO: Add to Cart only if Batch Present
@@ -75,6 +76,7 @@ class PharmacyPOSApp(QMainWindow):
         uic.loadUi('ui/mainwindow.ui', self)
 
         # self.init_menu()
+        self.init_menu()
 
         self.init_cart()
 
@@ -82,14 +84,30 @@ class PharmacyPOSApp(QMainWindow):
 
         self.init_customer()
 
+        self.init_product_page()
+
         self.showMaximized()  # This will make the window full screen
         self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
 
-    def init_menu(self):
-        self.dashboard_btn = self.findChild(QPushButton, 'menu_dashboard_btn')
-        self.inventory_btn = self.findChild(QPushButton, 'menu_inventory_btn')
+    def init_product_page(self):
+        self.product_page_widget = ProductPage()
+        self.product_layout.addWidget(self.product_page_widget)
 
-        self.dashbaord_icon = QIcon("assets/cross.svg")
+    def init_menu(self):
+        self.main_stacked_widget = self.findChild(QStackedWidget, 'mainWindowStackedWidget')
+        self.product_page = self.findChild(QWidget, 'product_page')
+        self.dashboard_page = self.findChild(QWidget, 'dashboard_page')
+        self.home_page = self.findChild(QWidget, 'pointOfSalePage')
+
+        self.dashboard_btn = self.findChild(QPushButton, 'menu_dashboard_btn')
+        self.product_btn = self.findChild(QPushButton, 'menu_product_btn')
+        self.home_btn = self.findChild(QPushButton, 'menu_home_btn')
+
+        self.dashboard_btn.clicked.connect(self.switch_dashboard_page)
+        self.product_btn.clicked.connect(self.switch_product_page)
+        self.home_btn.clicked.connect(self.switch_home_page)
+
+        """self.dashbaord_icon = QIcon("assets/cross.svg")
         self.inventory_icon = QIcon("assets/cross.svg")
 
         # Create a button with icon only for both states
@@ -117,7 +135,7 @@ class PharmacyPOSApp(QMainWindow):
 
         self.push_btn.clicked.connect(self.toggle_menu)
 
-        self.hide_menu()
+        self.hide_menu()"""
 
         # self.button.setLayoutDirection(Qt.lef)
         """def init_menu(self):
@@ -253,6 +271,18 @@ class PharmacyPOSApp(QMainWindow):
         # Override the resize event to update the product grid layout when the window is resized
         super().resizeEvent(event)
         self.update_product_grid_layout()
+
+    def switch_dashboard_page(self):
+        if not (self.main_stacked_widget.currentWidget() == self.dashboard_page):
+            self.main_stacked_widget.setCurrentWidget(self.dashboard_page)
+
+    def switch_product_page(self):
+        if not (self.main_stacked_widget.currentWidget() == self.product_page):
+            self.main_stacked_widget.setCurrentWidget(self.product_page)
+
+    def switch_home_page(self):
+        if not (self.main_stacked_widget.currentWidget() == self.home_page):
+            self.main_stacked_widget.setCurrentWidget(self.home_page)
 
     def toggle_button_text(self):
         if self.collapse_btn:

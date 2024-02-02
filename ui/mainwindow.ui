@@ -342,11 +342,11 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="inventory_page">
+      <widget class="QWidget" name="product_page">
        <property name="layoutDirection">
         <enum>Qt::LeftToRight</enum>
        </property>
-       <layout class="QGridLayout" name="inventory_layout"/>
+       <layout class="QGridLayout" name="product_layout"/>
       </widget>
       <widget class="QWidget" name="dashboard_page">
        <layout class="QGridLayout" name="dashboard_layout"/>
@@ -357,6 +357,13 @@
      <widget class="QWidget" name="main_menu_widget" native="true">
       <layout class="QVBoxLayout" name="main_menu_layout">
        <item>
+        <widget class="QPushButton" name="menu_home_btn">
+         <property name="text">
+          <string>Home</string>
+         </property>
+        </widget>
+       </item>
+       <item>
         <widget class="QPushButton" name="menu_dashboard_btn">
          <property name="text">
           <string>Dashboard</string>
@@ -364,9 +371,9 @@
         </widget>
        </item>
        <item>
-        <widget class="QPushButton" name="menu_inventory_btn">
+        <widget class="QPushButton" name="menu_product_btn">
          <property name="text">
-          <string>Inventory</string>
+          <string>Product</string>
          </property>
         </widget>
        </item>
