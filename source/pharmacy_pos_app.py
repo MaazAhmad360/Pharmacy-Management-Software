@@ -17,12 +17,14 @@ from source.customer import Customer
 from source.main_header_widget import MainHeader
 #from source.main_menu import SlidingMenu
 from source.product_page import ProductPage
+from source.helper import Helper
 
 
 # TODO: Add to Cart only if Batch Present
 # TODO: No Payment on empty cart
 # TODO: Customer Validation Before Payment
 # TODO: Add Menu Animation (Currently Commented init_menu())
+# TODO: Change element names: PointOfSalesPage
 class PharmacyPOSApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -90,7 +92,7 @@ class PharmacyPOSApp(QMainWindow):
         self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
 
     def init_product_page(self):
-        self.product_page_widget = ProductPage()
+        self.product_page_widget = ProductPage(self.product_list)
         self.product_layout.addWidget(self.product_page_widget)
 
     def init_menu(self):
@@ -223,7 +225,7 @@ class PharmacyPOSApp(QMainWindow):
         # Set table headers
         headers = ['ID', 'Barcode', 'Product Name', 'Formula', 'Batch Code', 'Expiry Date', 'Quantity', 'Unit Rate',
                    'Net Price', 'Remove']
-        self.set_table_headers(self.itemCartTable, headers)
+        Helper.set_table_headers(self.itemCartTable, headers)
 
         # Get references to the labels
         self.total_items_count_label = self.findChild(QLabel, 'totalItemsCountLabel')
@@ -262,10 +264,6 @@ class PharmacyPOSApp(QMainWindow):
 
     def execute_query(self, query):
         return execute_query(query, self.conn)
-
-    def set_table_headers(self, table_widget, headers):
-        table_widget.setColumnCount(len(headers))
-        table_widget.setHorizontalHeaderLabels(headers)
 
     def resizeEvent(self, event):
         # Override the resize event to update the product grid layout when the window is resized
