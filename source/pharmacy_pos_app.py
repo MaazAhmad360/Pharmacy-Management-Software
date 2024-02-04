@@ -7,6 +7,7 @@ from PyQt5 import uic
 from PyQt5.QtGui import QIcon
 from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent, QPropertyAnimation, QRect, QDate
 import pymysql
+from source.data_manager import DataManager
 from source.product_widget import ProductWidget
 from source.database_helper import connect_to_database, execute_query, execute_query_with_status
 from source.add_customer_dialog import AddCustomerDialog
@@ -30,6 +31,9 @@ from source.helper import Helper
 # TODO: Change element names: PointOfSalesPage
 # TODO: Add Batch Existince Check before Adding to Cart
 # TODO: NOT NULL FKS in ProductDetails
+# TODO: Create a Method to initialize the data and reduce redundant code
+# TODO: Hybrid Connection (Offline and Online)
+# TODO: Implement Queue method to execute queries once online
 class PharmacyPOSApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -42,8 +46,10 @@ class PharmacyPOSApp(QMainWindow):
 
         self.cart_items = {}  # Dictionary to store items in the cart with their quantities
 
+        self.data_manager = DataManager()
+
         # initializing manufacturers in a list
-        all_manufacturers = self.fetch_all(MANUFACTURERS_TABLE)
+        """all_manufacturers = self.fetch_all(MANUFACTURERS_TABLE)
         self.manufacturers_list = []
         for manufacturer in all_manufacturers:
             self.manufacturers_list.append(Manufacturer(manufacturer["ManufacturerID"], manufacturer["Name"]))
@@ -96,9 +102,9 @@ class PharmacyPOSApp(QMainWindow):
             self.batch_list.append(Batch(batch["BatchID"], batch["BatchCode"], batch["ArrivalDate"], batch["ManufacturingDate"], batch["ExpiryDate"], batch["Quantity"]))
 
             self.batch_list[-1].add_vendor(next((vendor for vendor in self.vendor_list if int(batch["VendorID"]) == vendor.ID), None))  # find the matching vendorID from the vendorlist and reference it in the batch instance - same purpose as the one commented below
-            """for vendor in self.vendor_list:  # referencing the appropriate vendor through ID
+           """ """for vendor in self.vendor_list:  # referencing the appropriate vendor through ID
                 if int(batch["VendorID"]) is vendor.ID:
-                    self.batch_list[-1].add_vendor(vendor)"""
+                    self.batch_list[-1].add_vendor(vendor)""""""
 
             for product in self.product_list:  # associating the batch with the appropriate product
                 if int(batch["ProductID"]) == product.ID:
@@ -107,7 +113,7 @@ class PharmacyPOSApp(QMainWindow):
         all_customers = self.fetch_all(CUSTOMERS_TABLE)
         self.customer_list = []
         for customer in all_customers:
-            self.customer_list.append(Customer(customer["CustomerID"], customer["Name"], customer["Address"], customer["Contact"]))
+            self.customer_list.append(Customer(customer["CustomerID"], customer["Name"], customer["Address"], customer["Contact"]))"""
 
         self.init_ui()
 
@@ -132,7 +138,7 @@ class PharmacyPOSApp(QMainWindow):
         self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
 
     def init_product_page(self):
-        self.product_page_widget = ProductPage(self.product_list)
+        self.product_page_widget = ProductPage()
         self.product_layout.addWidget(self.product_page_widget)
 
     def init_menu(self):
@@ -317,6 +323,11 @@ class PharmacyPOSApp(QMainWindow):
         super().resizeEvent(event)
         self.update_product_grid_layout()
 
+    def load_entities(self, entity_class, id_column, table_name):
+        query = f"SELECT * FROM {table_name}"
+        results = execute_query(query, self.conn)
+        return [entity_class(**row, id_column=row[id_column]) for row in results]
+
     def switch_dashboard_page(self):
         if not (self.main_stacked_widget.currentWidget() == self.dashboard_page):
             self.main_stacked_widget.setCurrentWidget(self.dashboard_page)
@@ -381,7 +392,7 @@ class PharmacyPOSApp(QMainWindow):
         return self.execute_query(query)
 
     def get_expiry_date_for_batch(self, product_id, batch_code):
-        for product in self.product_list:
+        for product in self.data_manager.product_list:
             if product_id == product.ID:
                 if product.batches:
                     for batch in product.batches:
@@ -389,7 +400,7 @@ class PharmacyPOSApp(QMainWindow):
                             return batch.expiry_date
 
     def get_batch_id(self, product_id, batch_code):
-        for product in self.product_list:
+        for product in self.data_manager.product_list:
             if product_id == product.ID:
                 if product.batches:
                     for batch in product.batches:
@@ -643,7 +654,7 @@ class PharmacyPOSApp(QMainWindow):
 
         # Display the default products in the product view
         # self.display_search_results(default_results)
-        self.display_search_results(self.product_list)
+        self.display_search_results(self.data_manager.product_list)
 
     def start_product_search_timer(self):
         # Start the timer when text is changed
@@ -678,7 +689,7 @@ class PharmacyPOSApp(QMainWindow):
 
     def search_product_locally(self, search_term):
         # Perform a local search on the already fetched products
-        results = [product for product in self.product_list if search_term.lower() in product.name.lower()]
+        results = [product for product in self.data_manager.product_list if search_term.lower() in product.name.lower()]
         return results
 
     def search_product(self):
