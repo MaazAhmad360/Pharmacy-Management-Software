@@ -3,12 +3,11 @@ from datetime import datetime
 
 
 class Product:
-    def __init__(self, ID, barcode, name, group, description, purchasePrice, salesPrice, totalStock, minStock, maxStock, creationDate):
+    def __init__(self, ID, barcode, name, description, purchasePrice, salesPrice, totalStock, minStock, maxStock, creationDate):
         # basic product attributes
         self.ID = int(ID)
         self.barcode = int(barcode)
         self.name = name
-        self.group = group
         self.description = description
         self.purchasePrice = float(purchasePrice)
         self.salesPrice = float(salesPrice)
@@ -19,6 +18,7 @@ class Product:
         self.creationDate =creationDate
 
         # attributed data from other tables
+        self.group = None
         self.manufacturer = None
         self.formula = None
         self.batches = []
@@ -29,6 +29,9 @@ class Product:
 
     def add_formula(self, formula):
         self.formula = formula
+
+    def add_product_group(self, product_group):
+        self.group = product_group
 
     def add_batch(self, batch):
         self.batches.append(batch)

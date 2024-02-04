@@ -2,10 +2,10 @@
 from source.globals import *
 import datetime
 from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, \
-    QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox, QScrollArea, QStackedWidget
+    QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox, QScrollArea, QStackedWidget, QDateEdit
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
-from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent, QPropertyAnimation, QRect
+from PyQt5.QtCore import pyqtSignal, QTimer, Qt, QEvent, QPropertyAnimation, QRect, QDate
 import pymysql
 from source.product_widget import ProductWidget
 from source.database_helper import connect_to_database, execute_query, execute_query_with_status
@@ -261,6 +261,13 @@ class PharmacyPOSApp(QMainWindow):
     def init_cart(self):
         self.clearBtn.clicked.connect(self.remove_all_from_cart)
         self.payBtn.clicked.connect(self.cart_checkout)
+
+        # Date selector widget
+        self.cart_date_selector = QDateEdit(self)
+        self.cart_date_selector.setCalendarPopup(True)  # Enable the calendar popup
+        self.cart_date_selector.setDateRange(QDate(2000, 1, 1), QDate.currentDate())  # Optional: Set a date range
+        self.cart_date_selector.setDate(QDate.currentDate())  # Optional: Set the initial date
+        self.productSearchLeftDiv.addWidget(self.cart_date_selector)
 
         # Set table headers
         headers = ['ID', 'Barcode', 'Product Name', 'Formula', 'Batch Code', 'Expiry Date', 'Quantity', 'Unit Rate',
@@ -564,7 +571,10 @@ class PharmacyPOSApp(QMainWindow):
                 customer_id = self.find_customer_id(customer_name)
                 total_price = float(self.cash_return_count_label.text().split()[-1])
                 total_items = int(self.total_items_count_label.text())
-                current_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                # current_date = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+                # formatted_date = selected_date.toString("yyyy-MM-dd")
+                selected_date = self.cart_date_selector.date()
+                current_date = datetime.datetime(selected_date.year(), selected_date.month(), selected_date.day())
 
                 query = f"INSERT INTO Sales (CustomerID, SaleDate, TotalPrice, TotalItems) VALUES ({customer_id}, '{current_date}', {total_price}, {total_items})"
                 checkout_success = execute_query_with_status(query, self.conn)
