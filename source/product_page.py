@@ -53,5 +53,6 @@ class ProductPage(QWidget):
         self.product_table.setItem(row_position, 5, QTableWidgetItem(str(row_data.purchasePrice)))
         self.product_table.setItem(row_position, 6, QTableWidgetItem(str(row_data.salesPrice)))
         self.product_table.setItem(row_position, 7, QTableWidgetItem(str(row_data.totalStock)))
-        self.product_table.setItem(row_position, 8, QTableWidgetItem(row_data.formula))
-        self.product_table.setItem(row_position, 9, QTableWidgetItem(row_data.formula))
+        if row_data.formula:
+            self.product_table.setItem(row_position, 8, QTableWidgetItem(str(row_data.formula.name)))
+        #self.product_table.setItem(row_position, 9, QTableWidgetItem(row_data.formula))

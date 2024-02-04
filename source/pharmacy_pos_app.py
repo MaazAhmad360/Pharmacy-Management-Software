@@ -14,6 +14,8 @@ from source.product import Product
 from source.batch import Batch
 from source.vendor import Vendor
 from source.customer import Customer
+from source.manufacturer import Manufacturer
+from source.formula import Formula
 from source.main_header_widget import MainHeader
 #from source.main_menu import SlidingMenu
 from source.product_page import ProductPage
@@ -25,6 +27,8 @@ from source.helper import Helper
 # TODO: Customer Validation Before Payment
 # TODO: Add Menu Animation (Currently Commented init_menu())
 # TODO: Change element names: PointOfSalesPage
+# TODO: Add Batch Existince Check before Adding to Cart
+# TODO:
 class PharmacyPOSApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -37,11 +41,36 @@ class PharmacyPOSApp(QMainWindow):
 
         self.cart_items = {}  # Dictionary to store items in the cart with their quantities
 
+        # initializing manufacturers in a list
+        all_manufacturers = self.fetch_all(MANUFACTURERS_TABLE)
+        self.manufacturers_list = []
+        for manufacturer in all_manufacturers:
+            self.manufacturers_list.append(Manufacturer(manufacturer["ManufacturerID"], manufacturer["Name"]))
+
+        # initializing manufacturers in a list
+        all_formulas = self.fetch_all(FORMULAS_TABLE)
+        self.formulas_list = []
+        for formula in all_formulas:
+            self.formulas_list.append(Formula(formula["FormulaID"], formula["Name"]))
+
         # initializing all products in a list
         all_products = self.fetch_all(PRODUCT_TABLE) # loading all products in memory
         self.product_list = []
         for product in all_products:
-            self.product_list.append(Product(product["ProductID"], product["Barcode"], product["Name"], product["ProductGroup"], product["Description"], product["PurchasePrice"], product["SalesPrice"], product["TotalStock"], product["Formula"], product["MinStock"], product["MaxStock"], product["CreationDate"], product["ManufacturerID"]))
+            self.product_list.append(
+                Product(product["ProductID"], product["Barcode"], product["Name"], product["ProductGroup"],
+                        product["Description"], product["PurchasePrice"], product["SalesPrice"],
+                        product["TotalStock"], product["MinStock"], product["MaxStock"],
+                        product["CreationDate"]))
+
+            for manufacturer in self.manufacturers_list:  # associating the batch with the appropriate product
+                if product["ManufacturerID"] == manufacturer.ID:  # add a manufacturer if it referenced in Product
+                    self.product_list[-1].add_manufacturer(manufacturer)
+
+            for formula in self.formulas_list:  # associating the batch with the appropriate product
+                if product["FormulaID"] == formula.ID:  # add a manufacturer if it referenced in Product
+                    self.product_list[-1].add_formula(formula)
+
 
         # initialing all vendors in a list
         all_vendors = self.fetch_all(VENDORS_TABLE)
@@ -61,7 +90,7 @@ class PharmacyPOSApp(QMainWindow):
                     self.batch_list[-1].add_vendor(vendor)"""
 
             for product in self.product_list:  # associating the batch with the appropriate product
-                if int(batch["ProductID"]) is product.ID:
+                if int(batch["ProductID"]) == product.ID:
                     product.add_batch(self.batch_list[-1])
 
         all_customers = self.fetch_all(CUSTOMERS_TABLE)
@@ -391,7 +420,8 @@ class PharmacyPOSApp(QMainWindow):
             self.itemCartTable.setItem(row_position, 0, QTableWidgetItem(str(productID)))
             self.itemCartTable.setItem(row_position, 1, QTableWidgetItem(str(details['barcode'])))
             self.itemCartTable.setItem(row_position, 2, QTableWidgetItem(details['name']))
-            self.itemCartTable.setItem(row_position, 3, QTableWidgetItem(details['formula']))
+            if details['formula']:
+                self.itemCartTable.setItem(row_position, 3, QTableWidgetItem(str(details['formula'].name)))
 
             # Create a Combo Box for Batch Code
             batch_code_combo_box = QComboBox()
