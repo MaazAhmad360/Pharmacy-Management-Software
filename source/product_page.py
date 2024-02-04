@@ -25,8 +25,8 @@ class ProductPage(QWidget):
         Helper.set_table_headers(self.product_table, headers)
 
         # Set the table to stretch columns and rows
-        self.product_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
-        self.product_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.product_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.product_table.verticalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         self.populate_table()
 
@@ -48,11 +48,15 @@ class ProductPage(QWidget):
         self.product_table.setItem(row_position, 0, QTableWidgetItem(str(row_data.ID)))
         self.product_table.setItem(row_position, 1, QTableWidgetItem(str(row_data.barcode)))
         self.product_table.setItem(row_position, 2, QTableWidgetItem(row_data.name))
-        self.product_table.setItem(row_position, 3, QTableWidgetItem(row_data.group))
+
+        if row_data.group:
+            self.product_table.setItem(row_position, 3, QTableWidgetItem(str(row_data.group.name)))
         self.product_table.setItem(row_position, 4, QTableWidgetItem(row_data.description))
         self.product_table.setItem(row_position, 5, QTableWidgetItem(str(row_data.purchasePrice)))
         self.product_table.setItem(row_position, 6, QTableWidgetItem(str(row_data.salesPrice)))
         self.product_table.setItem(row_position, 7, QTableWidgetItem(str(row_data.totalStock)))
+
         if row_data.formula:
             self.product_table.setItem(row_position, 8, QTableWidgetItem(str(row_data.formula.name)))
-        #self.product_table.setItem(row_position, 9, QTableWidgetItem(row_data.formula))
+        if row_data.manufacturer:
+            self.product_table.setItem(row_position, 9, QTableWidgetItem(row_data.manufacturer.name))

@@ -16,6 +16,7 @@ from source.vendor import Vendor
 from source.customer import Customer
 from source.manufacturer import Manufacturer
 from source.formula import Formula
+from source.product_group import ProductGroup
 from source.main_header_widget import MainHeader
 #from source.main_menu import SlidingMenu
 from source.product_page import ProductPage
@@ -28,7 +29,7 @@ from source.helper import Helper
 # TODO: Add Menu Animation (Currently Commented init_menu())
 # TODO: Change element names: PointOfSalesPage
 # TODO: Add Batch Existince Check before Adding to Cart
-# TODO:
+# TODO: NOT NULL FKS in ProductDetails
 class PharmacyPOSApp(QMainWindow):
     def __init__(self):
         super().__init__()
@@ -53,23 +54,33 @@ class PharmacyPOSApp(QMainWindow):
         for formula in all_formulas:
             self.formulas_list.append(Formula(formula["FormulaID"], formula["Name"]))
 
+        # initializing manufacturers in a list
+        all_product_group = self.fetch_all(PRODUCT_GROUPS_TABLE)
+        self.product_groups_list = []
+        for product_group in all_product_group:
+            self.product_groups_list.append(ProductGroup(product_group["GroupID"], product_group["Name"], product_group["TotalProducts"]))
+
         # initializing all products in a list
         all_products = self.fetch_all(PRODUCT_TABLE) # loading all products in memory
         self.product_list = []
         for product in all_products:
             self.product_list.append(
-                Product(product["ProductID"], product["Barcode"], product["Name"], product["ProductGroup"],
+                Product(product["ProductID"], product["Barcode"], product["Name"],
                         product["Description"], product["PurchasePrice"], product["SalesPrice"],
                         product["TotalStock"], product["MinStock"], product["MaxStock"],
                         product["CreationDate"]))
 
-            for manufacturer in self.manufacturers_list:  # associating the batch with the appropriate product
+            for manufacturer in self.manufacturers_list:  # associating the manufacturer with the appropriate product
                 if product["ManufacturerID"] == manufacturer.ID:  # add a manufacturer if it referenced in Product
                     self.product_list[-1].add_manufacturer(manufacturer)
 
-            for formula in self.formulas_list:  # associating the batch with the appropriate product
-                if product["FormulaID"] == formula.ID:  # add a manufacturer if it referenced in Product
+            for formula in self.formulas_list:  # associating the formula with the appropriate product
+                if product["FormulaID"] == formula.ID:  # add a formula if it referenced in Product
                     self.product_list[-1].add_formula(formula)
+
+            for product_group in self.product_groups_list:  # associating the formula with the appropriate product
+                if product["ProductGroupID"] == product_group.ID:  # add a formula if it referenced in Product
+                    self.product_list[-1].add_product_group(product_group)
 
 
         # initialing all vendors in a list
