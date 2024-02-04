@@ -5,7 +5,9 @@ from datetime import datetime
 class Product:
     def __init__(self, ID, barcode, name, description, purchasePrice, salesPrice, totalStock, minStock, maxStock, creationDate):
         # basic product attributes
-        self.ID = int(ID)
+        self.ID = None
+        if ID:
+            self.ID = int(ID)
         self.barcode = int(barcode)
         self.name = name
         self.description = description
@@ -15,7 +17,7 @@ class Product:
         self.minStock = int(minStock)
         self.maxStock = int(maxStock)
         # self.creationDate = datetime.strptime(creationDate, "%Y-%m-%d")
-        self.creationDate =creationDate
+        self.creationDate = creationDate
 
         # attributed data from other tables
         self.group = None

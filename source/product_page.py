@@ -1,8 +1,12 @@
-from PyQt5.QtWidgets import QWidget, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QGridLayout, QPushButton, QVBoxLayout
+from PyQt5.QtWidgets import QWidget, QTableWidget, QTableWidgetItem, QHeaderView, QAbstractItemView, QGridLayout, \
+    QPushButton, QVBoxLayout, QDialog, QMessageBox
 from PyQt5 import uic
 from PyQt5.QtGui import QIcon
 from source.helper import Helper
 from source.data_manager import DataManager
+from source.product_dialog import ProductDialog
+from source.database_helper import connect_to_database, execute_query_with_status
+
 
 class ProductWindow(QWidget):
     def __init__(self, product=None):
@@ -46,6 +50,7 @@ class ProductWindow(QWidget):
 
         self.close()
 
+
 class ProductPage(QWidget):
     def __init__(self):
         super().__init__()
@@ -62,7 +67,6 @@ class ProductPage(QWidget):
 
     def init_header(self):
         self.header_layout = self.findChild(QGridLayout, 'product_header_layout')
-
 
         self.new_product_btn = QPushButton("New Product")
         self.edit_product_btn = QPushButton("Edit Product")
@@ -137,8 +141,35 @@ class ProductPage(QWidget):
                 self.product_table.setItem(row_position, column, QTableWidgetItem(str(value)))
 
     def show_new_product_window(self):
-        product_window = ProductWindow()
-        product_window.show()
+        # product_window = ProductWindow()
+        product_window = ProductDialog(self)
+        result = product_window.exec_()
+
+        if result == QDialog.Accepted:
+            product = product_window.get_product_info()
+
+            self.data_manager.product_list.append(product)
+
+            self.add_product_to_database(product)
+
+    def add_product_to_database(self, product):
+        query = f"INSERT INTO ProductDetails (Barcode, Name, ProductGroupID, Description, PurchasePrice, SalesPrice, TotalStock, FormulaID, MinStock, MaxStock, CreationDate, ManufacturerID) VALUES ('{product.barcode}', '{product.name}', '{product.group.ID}', '{product.description}', '{product.purchasePrice}', '{product.salesPrice}', '{product.totalStock}', '{product.formula.ID}', '{product.minStock}', '{product.maxStock}', '{product.creationDate}', '{product.manufacturer.ID}')"
+
+        conn = connect_to_database()
+        success, result = execute_query_with_status(query, conn)
+
+        successDialog = QMessageBox()
+        if success:
+            successDialog.setText("Customer Added Successfuly")
+            # print("Customer added successfully!")
+        else:
+            successDialog.setText("Failed To Add Customer")
+
+        successDialog.exec_()
+        return result
+        # product_window.show()
+
+
 """from PyQt5.QtWidgets import QMainWindow, QVBoxLayout, QWidget, QGridLayout, QLabel, QLineEdit, QSpinBox, QFrame, \
     QPushButton, QTableWidgetItem, QComboBox, QCompleter, QDialog, QMessageBox, QScrollArea, QHeaderView, QTableWidget
 from PyQt5 import uic
