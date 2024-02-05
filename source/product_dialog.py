@@ -1,8 +1,9 @@
 # add_customer_dialog.py
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox, QInputDialog
 from source.data_manager import DataManager
 from source.product import Product
 from datetime import datetime
+from source.product_group import ProductGroup
 
 
 class ProductDialog(QDialog):
@@ -80,6 +81,16 @@ class ProductDialog(QDialog):
         self.shelf_combo_box.clear()
         self.shelf_combo_box.addItems(shelf_tags)
 
+        # Add buttons for adding new items
+        self.add_group_button = QPushButton("Add Group")
+        self.add_group_button.clicked.connect(self.show_add_group_dialog)
+
+        self.add_formula_button = QPushButton("Add Formula")
+        self.add_formula_button.clicked.connect(self.show_add_formula_dialog)
+
+        self.add_manufacturer_button = QPushButton("Add Manufacturer")
+        self.add_manufacturer_button.clicked.connect(self.show_add_manufacturer_dialog)
+
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.accept)
 
@@ -95,10 +106,13 @@ class ProductDialog(QDialog):
         layout.addWidget(self.description_input)
         layout.addWidget(self.group_label)
         layout.addWidget(self.group_combo_box)
+        layout.addWidget(self.add_group_button)
         layout.addWidget(self.formula_label)
         layout.addWidget(self.formula_combo_box)
+        layout.addWidget(self.add_formula_button)
         layout.addWidget(self.manufacturer_label)
         layout.addWidget(self.manufacturer_combo_box)
+        layout.addWidget(self.add_manufacturer_button)
         layout.addWidget(self.shelf_label)
         layout.addWidget(self.shelf_combo_box)
         layout.addWidget(self.purchase_price_label)
@@ -157,6 +171,26 @@ class ProductDialog(QDialog):
             product.add_shelf(shelf)
 
         return product
+
+    def show_add_group_dialog(self):
+        group_name, ok = QInputDialog.getText(self, "Add Group", "Enter Group Name:")
+        if ok and group_name:
+            # Add the new group to the combo box
+            self.group_combo_box.addItem(group_name)
+
+            # self.data_manager.product_groups_list.append()
+
+    def show_add_formula_dialog(self):
+        formula_name, ok = QInputDialog.getText(self, "Add Formula", "Enter Formula Name:")
+        if ok and formula_name:
+            # Add the new formula to the combo box
+            self.formula_combo_box.addItem(formula_name)
+
+    def show_add_manufacturer_dialog(self):
+        manufacturer_name, ok = QInputDialog.getText(self, "Add Manufacturer", "Enter Manufacturer Name:")
+        if ok and manufacturer_name:
+            # Add the new manufacturer to the combo box
+            self.manufacturer_combo_box.addItem(manufacturer_name)
 
 """    def get_product_info(self):
         name = str(self.name_input.text())
