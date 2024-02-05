@@ -89,12 +89,12 @@ class ProductPage(QWidget):
 
     def init_table(self):
         self.product_table = self.findChild(QTableWidget, 'product_table_widget')
-        headers = ["ProductID", "Barcode", "Name", "ProductGroup", "Description", "PurchasePrice", "SalesPrice",
-                   "TotalStock", "Formula", "MinStock", "MaxStock", "CreationDate", "ManufacturerID"]
+        headers = ["Code", "Barcode", "Name", "Group", "Description", "Formula", "Manufacturer", "PurchasePrice", "SalesPrice",
+                   "TotalStock", "MinStock", "MaxStock", "CreationDate"]
         Helper.set_table_headers(self.product_table, headers)
 
         # Allow dynamic resizing of columns
-        self.product_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
+        # self.product_table.horizontalHeader().setSectionResizeMode(QHeaderView.Stretch)
 
         self.populate_table()
 
@@ -124,9 +124,8 @@ class ProductPage(QWidget):
     def populate_table_row(self, row_position, row_data):
         # Define a mapping between column indices and attribute names in row_data
         column_mapping = {
-            0: 'ID', 1: 'barcode', 2: 'name', 3: 'group.name', 4: 'description',
-            5: 'purchasePrice', 6: 'salesPrice', 7: 'totalStock', 8: 'formula.name',
-            9: 'manufacturer.name'
+            0: 'ID', 1: 'barcode', 2: 'name', 3: 'group.name', 4: 'description', 5: 'formula.name', 6: 'manufacturer.name',
+            7: 'purchasePrice', 8: 'salesPrice', 9: 'totalStock', 10: 'minStock', 11: 'maxStock', 12: 'creationDate'
         }
 
         for column, attribute in column_mapping.items():
@@ -147,10 +146,10 @@ class ProductPage(QWidget):
 
         if result == QDialog.Accepted:
             product = product_window.get_product_info()
+            if product:
+                self.data_manager.product_list.append(product)
 
-            self.data_manager.product_list.append(product)
-
-            self.add_product_to_database(product)
+                self.add_product_to_database(product)
 
     def add_product_to_database(self, product):
         query = f"INSERT INTO ProductDetails (Barcode, Name, ProductGroupID, Description, PurchasePrice, SalesPrice, TotalStock, FormulaID, MinStock, MaxStock, CreationDate, ManufacturerID) VALUES ('{product.barcode}', '{product.name}', '{product.group.ID}', '{product.description}', '{product.purchasePrice}', '{product.salesPrice}', '{product.totalStock}', '{product.formula.ID}', '{product.minStock}', '{product.maxStock}', '{product.creationDate}', '{product.manufacturer.ID}')"
