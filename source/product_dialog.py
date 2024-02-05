@@ -1,5 +1,5 @@
 # add_customer_dialog.py
-from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QLineEdit, QPushButton, QComboBox, QMessageBox
 from source.data_manager import DataManager
 from source.product import Product
 from datetime import datetime
@@ -70,6 +70,16 @@ class ProductDialog(QDialog):
         self.group_combo_box.clear()
         self.group_combo_box.addItems(group_names)
 
+        self.shelf_label = QLabel("Shelf Tag:")
+        self.shelf_combo_box = QComboBox()
+
+        # Fetch the list of customer names from the database based on the search term
+        shelf_tags = [shelf.tag for shelf in self.data_manager.shelf_list]
+
+        # Clear existing items and populate the names in the combo box
+        self.shelf_combo_box.clear()
+        self.shelf_combo_box.addItems(shelf_tags)
+
         self.save_button = QPushButton("Save")
         self.save_button.clicked.connect(self.accept)
 
@@ -89,6 +99,8 @@ class ProductDialog(QDialog):
         layout.addWidget(self.formula_combo_box)
         layout.addWidget(self.manufacturer_label)
         layout.addWidget(self.manufacturer_combo_box)
+        layout.addWidget(self.shelf_label)
+        layout.addWidget(self.shelf_combo_box)
         layout.addWidget(self.purchase_price_label)
         layout.addWidget(self.purchase_price_input)
         # layout.addWidget(self.markup_price_label)
@@ -105,6 +117,48 @@ class ProductDialog(QDialog):
         self.setLayout(layout)
 
     def get_product_info(self):
+        name = str(self.name_input.text())
+        barcode = str(self.barcode_input.text())
+        description = str(self.description_input.text())
+        purchase_price = float(self.purchase_price_input.text()) if self.purchase_price_input.text() else 0.0
+        sales_price = float(self.sales_price_input.text()) if self.sales_price_input.text() else 0.0
+        min_stock = int(self.min_stock_input.text()) if self.min_stock_input.text() else 0
+        max_stock = int(self.max_stock_input.text()) if self.max_stock_input.text() else 0
+
+        # Validate sale price greater than purchase price
+        if sales_price <= purchase_price:
+            # You can handle the validation error here, like showing a message box
+            error_dialog = QMessageBox()
+            error_dialog.setText("Sale price must be greater than purchase price.")
+            error_dialog.exec_()
+            return None  # Return None to indicate validation failure
+
+        product = Product(None, barcode, name, description, purchase_price, sales_price, 0, min_stock, max_stock, datetime.now().strftime('%Y-%m-%d %H:%M:%S'))
+
+        group_name = str(self.group_combo_box.currentText())
+        group = next((group for group in self.data_manager.product_groups_list if str(group.name) == group_name), None)
+        if group:
+            group.total_products += 1
+            product.add_product_group(group)
+
+        formula_name = str(self.formula_combo_box.currentText())
+        formula = next((formula for formula in self.data_manager.formulas_list if str(formula.name) == formula_name), None)
+        if formula:
+            product.add_formula(formula)
+
+        manufacturer_name = str(self.manufacturer_combo_box.currentText())
+        manufacturer = next((manufacturer for manufacturer in self.data_manager.manufacturers_list if str(manufacturer.name) == manufacturer_name), None)
+        if manufacturer:
+            product.add_manufacturer(manufacturer)
+
+        shelf_tag = str(self.shelf_combo_box.currentText())
+        shelf = next((shelf for shelf in self.data_manager.shelf_list if str(shelf.tag) == shelf_tag), None)
+        if shelf:
+            product.add_shelf(shelf)
+
+        return product
+
+"""    def get_product_info(self):
         name = str(self.name_input.text())
         barcode = str(self.barcode_input.text())
         description = str(self.description_input.text())
@@ -128,4 +182,4 @@ class ProductDialog(QDialog):
         manufacturer = next((manufacturer for manufacturer in self.data_manager.manufacturers_list if str(manufacturer.name) == manufacturer_name), None)
         product.add_manufacturer(manufacturer)
 
-        return product
+        return product"""

@@ -20,6 +20,7 @@ class Product:
         self.creationDate = creationDate
 
         # attributed data from other tables
+        self.shelf = None
         self.group = None
         self.manufacturer = None
         self.formula = None
@@ -34,6 +35,9 @@ class Product:
 
     def add_product_group(self, product_group):
         self.group = product_group
+
+    def add_shelf(self, shelf):
+        self.shelf = shelf
 
     def add_batch(self, batch):
         self.batches.append(batch)
