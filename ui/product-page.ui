@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ui version="4.0">
+ <class>product_page_widget</class>
+ <widget class="QWidget" name="product_page_widget">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>1092</width>
+    <height>645</height>
+   </rect>
+  </property>
+  <property name="windowTitle">
+   <string>Form</string>
+  </property>
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
+    <widget class="QWidget" name="product_header_widget" native="true">
+     <layout class="QGridLayout" name="product_header_layout"/>
+    </widget>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="product_hero_layout">
+     <item>
+      <layout class="QVBoxLayout" name="tree_view_layout">
+       <item>
+        <widget class="QTreeWidget" name="product_tree_widget">
+         <column>
+          <property name="text">
+           <string notr="true">1</string>
+          </property>
+         </column>
+        </widget>
+       </item>
+      </layout>
+     </item>
+     <item>
+      <layout class="QVBoxLayout" name="table_view_layout">
+       <item>
+        <layout class="QHBoxLayout" name="product_search_layout">
+         <item>
+          <widget class="QLineEdit" name="product_search_line_edit"/>
+         </item>
+         <item>
+          <widget class="QPushButton" name="product_search_btn">
+           <property name="text">
+            <string>Search</string>
+           </property>
+          </widget>
+         </item>
+        </layout>
+       </item>
+       <item>
+        <widget class="QTableWidget" name="product_table_widget"/>
+       </item>
+      </layout>
+     </item>
+    </layout>
+   </item>
+  </layout>
+ </widget>
+ <resources/>
+ <connections/>
+</ui>

@@ -12,5 +12,6 @@ SALE_DETAILS_TABLE = "SaleDetails"
 PURCHASE_DETAIL_TABLE = "PurchaseDetails"
 FORMULAS_TABLE = "Formulas"
 PRODUCT_GROUPS_TABLE = "ProductGroups"
+SHELF_TABLE = "Shelf"
 
 

@@ -242,3 +242,14 @@ fabric.properties
 .idea/caches/build_file_checksums.ser
 /ui/mainwindow(before header).ui
 /ui/mainwindow(product Grid.ui
+ui/mainwindow(before side menu.ui
+ui/mainwindow(before stach widget.ui
+
+source/export.txt
+source/db-scripts.py
+source/manufacturers_list.txt
+main-old.py
+Todo.txt
+misc/
+sql-dump/
+

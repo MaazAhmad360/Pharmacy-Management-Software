@@ -6,7 +6,7 @@ from source.helper import Helper
 from source.data_manager import DataManager
 from source.product_dialog import ProductDialog
 from source.database_helper import connect_to_database, execute_query_with_status
-
+from source.batch_dialog import BatchDialog
 
 class ProductWindow(QWidget):
     def __init__(self, product=None):
@@ -71,9 +71,9 @@ class ProductPage(QWidget):
         self.new_product_btn = QPushButton("New Product")
         self.edit_product_btn = QPushButton("Edit Product")
         self.delete_product_btn = QPushButton("Delete Product")
-        self.new_group_btn = QPushButton("New Group")
-        self.edit_group_btn = QPushButton("Edit Group")
-        self.delete_group_btn = QPushButton("Delete Group")
+        self.new_group_btn = QPushButton("New Batch")
+        self.edit_group_btn = QPushButton("Edit Batch")
+        self.delete_group_btn = QPushButton("Delete Batch")
 
         self.header_layout.addWidget(self.new_group_btn, 0, 0)
         self.header_layout.addWidget(self.edit_group_btn, 0, 1)
@@ -83,6 +83,7 @@ class ProductPage(QWidget):
         self.header_layout.addWidget(self.delete_product_btn, 1, 2)
 
         self.new_product_btn.clicked.connect(self.show_new_product_window)
+        self.new_group_btn.clicked.connect(self.show_new_batch_window)
 
         # self.refresh_btn = QPushButton("Refresh")
         # self.header = ProductHeader(self.product_header_widget, self.header_layout)
@@ -150,6 +151,13 @@ class ProductPage(QWidget):
                 self.data_manager.product_list.append(product)
 
                 self.add_product_to_database(product)
+
+    def show_new_batch_window(self):
+        batch_window = BatchDialog(self)
+        result = batch_window.exec_()
+
+        if result == QDialog.Accepted:
+            batch_window.add_new_batch()
 
     def add_product_to_database(self, product):
         query = f"INSERT INTO ProductDetails (Barcode, Name, ProductGroupID, Description, PurchasePrice, SalesPrice, TotalStock, FormulaID, MinStock, MaxStock, CreationDate, ManufacturerID) VALUES ('{product.barcode}', '{product.name}', '{product.group.ID}', '{product.description}', '{product.purchasePrice}', '{product.salesPrice}', '{product.totalStock}', '{product.formula.ID}', '{product.minStock}', '{product.maxStock}', '{product.creationDate}', '{product.manufacturer.ID}')"

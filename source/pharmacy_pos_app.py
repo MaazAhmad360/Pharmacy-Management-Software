@@ -62,7 +62,7 @@ class PharmacyPOSApp(QMainWindow):
         self.init_product_page()
 
         self.showMaximized()  # This will make the window full screen
-        self.setGeometry(0, 25, self.screen().geometry().width(), self.screen().geometry().height() - 50)
+        self.setGeometry(0, 0, self.screen().geometry().width(), self.screen().geometry().height())
 
     def init_product_page(self):
         self.product_page_widget = ProductPage()
@@ -505,6 +505,18 @@ class PharmacyPOSApp(QMainWindow):
     def cart_checkout(self):
         if self.cart_items:
             if self.customerComboBox.currentIndex != -1:
+                new_quantity = {}
+                for product_ID in self.cart_items:
+                    for product in self.data_manager.product_list:
+                        if product.ID == product_ID:
+                            if self.cart_items[product_ID]['quantity'] > product.totalStock:
+                                errStr = f"{product.name}'s Quantity is Greater than Stock"
+                                error = QMessageBox()
+                                error.setText(errStr)
+                                error.exec_()
+                                return None
+                            new_quantity[product_ID] = product.totalStock - self.cart_items[product_ID]['quantity']
+
                 customer_name = self.customerComboBox.currentText()
                 customer_id = self.find_customer_id(customer_name)
                 total_price = float(self.cash_return_count_label.text().split()[-1])
@@ -521,12 +533,20 @@ class PharmacyPOSApp(QMainWindow):
                 if checkout_success:
                     sales_id = self.fetch_new_sale_id()
                     self.update_sale_details(sales_id)
+                    for product_ID in new_quantity:
+                        update_query = f"UPDATE ProductDetails SET TotalStock = {new_quantity[product_ID]} WHERE ProductID = {product_ID}"
+                        # Use the execute_modification_query method for UPDATE queries
+                        status = self.data_manager.execute_modification_query(update_query)
                     self.remove_all_from_cart()
+                    self.display_default_products()
                     successDialog.setText("Payment Success")
 
                 else:
                     successDialog.setText("Payment Failed")
                 successDialog.exec_()
+            else:
+                error_dialog = QMessageBox("No Customer Selected")
+                error_dialog.exec_()
 
     def fetch_new_sale_id(self):
         query_sales_id = "SELECT LAST_INSERT_ID() AS NewSalesID"

@@ -74,3 +74,62 @@ def close_database_connection(conn):
     # Close the database connection
     if conn:
         conn.close()
+
+# simplified Singleton Design
+"""class DatabaseConnectionManager:
+    def __init__(self, host, user, password, database):
+        self.host = host
+        self.user = user
+        self.password = password
+        self.database = database
+        self.connection = None
+
+    def get_connection(self):
+        if self.connection is None or not self.connection.open:
+            self.connection = pymysql.connect(
+                host=self.host,
+                user=self.user,
+                password=self.password,
+                database=self.database
+            )
+        return self.connection
+
+    def close_connection(self):
+        if self.connection is not None and self.connection.open:
+            self.connection.close()"""
+
+# Single Instance Singleton Design
+"""import pymysql
+
+class DatabaseConnectionManager:
+    _instance = None
+
+    def __new__(cls, *args, **kwargs):
+        if not cls._instance:
+            cls._instance = super(DatabaseConnectionManager, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self, host, user, password, database):
+        if self._initialized:
+            return
+        self.host = host
+        self.user = user
+        self.password = password
+        self.database = database
+        self.connection = None
+        self._initialized = True
+
+    def get_connection(self):
+        if self.connection is None or not self.connection.open:
+            self.connection = pymysql.connect(
+                host=self.host,
+                user=self.user,
+                password=self.password,
+                database=self.database
+            )
+        return self.connection
+
+    def close_connection(self):
+        if self.connection is not None and self.connection.open:
+            self.connection.close()"""
